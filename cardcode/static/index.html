@@ -188,6 +188,28 @@
             <!-- Cards populated by JS -->
         </div>
     </aside>
+
+    <!-- Terminal Viewer -->
+    <aside class="drawer drawer-right drawer-wide" id="terminal-drawer">
+        <div class="drawer-header">
+            <div class="terminal-header-info">
+                <h3><i data-lucide="terminal"></i> <span id="terminal-card-title">Session</span></h3>
+                <span class="terminal-session-name" id="terminal-session-name"></span>
+            </div>
+            <div class="terminal-header-actions">
+                <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+                <label class="auto-refresh-label">
+                    <input type="checkbox" id="terminal-auto-refresh" checked> Auto
+                </label>
+                <button class="btn btn-icon drawer-close" id="terminal-close"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div class="terminal-output" id="terminal-output">
+            <pre id="terminal-pre"></pre>
+        </div>
+    </aside>
     <div class="drawer-overlay" id="drawer-overlay"></div>
 
     <!-- Card Dialog -->

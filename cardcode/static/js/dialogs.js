@@ -7,6 +7,7 @@ export function setupDialogs() {
     setupClearDone();
     setupArchiveDrawer();
     setupSettingsDrawer();
+    setupTerminalViewer();
 }
 
 function setupCardDialog() {
@@ -329,11 +330,103 @@ function setupSettingsDrawer() {
     });
 }
 
+// ── Terminal Viewer ─────────────────────────────────────────────
+
+function setupTerminalViewer() {
+    const drawer = document.getElementById('terminal-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    const closeBtn = document.getElementById('terminal-close');
+    const refreshBtn = document.getElementById('terminal-refresh');
+    const autoRefreshCheck = document.getElementById('terminal-auto-refresh');
+    const outputPre = document.getElementById('terminal-pre');
+    const titleEl = document.getElementById('terminal-card-title');
+    const sessionNameEl = document.getElementById('terminal-session-name');
+    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+
+    let currentCardId = null;
+    let autoRefreshInterval = null;
+
+    closeBtn.addEventListener('click', closeAllDrawers);
+
+    refreshBtn.addEventListener('click', () => {
+        if (currentCardId) loadTerminalOutput(currentCardId);
+    });
+
+    autoRefreshCheck.addEventListener('change', () => {
+        if (autoRefreshCheck.checked && currentCardId) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        autoRefreshInterval = setInterval(() => {
+            if (currentCardId) loadTerminalOutput(currentCardId);
+        }, 3000);
+    }
+
+    async function loadTerminalOutput(cardId) {
+        try {
+            const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`);
+            const data = await resp.json();
+
+            outputPre.textContent = data.output || '(no output)';
+            sessionNameEl.textContent = data.session || '';
+
+            // Auto-scroll to bottom
+            const container = outputPre.parentElement;
+            container.scrollTop = container.scrollHeight;
+
+            if (!data.alive) {
+                outputPre.textContent += '\n\n--- Session ended ---';
+                stopAutoRefresh();
+            }
+        } catch (err) {
+            outputPre.textContent = 'Failed to load terminal output';
+        }
+    }
+
+    // Expose globally for card click handler
+    window.__openTerminalViewer = async (cardId, cardTitle) => {
+        // Close other drawers
+        document.getElementById('archive-drawer').classList.remove('open');
+        document.getElementById('settings-drawer').classList.remove('open');
+
+        currentCardId = cardId;
+        titleEl.textContent = cardTitle || 'Session';
+        outputPre.textContent = 'Loading...';
+
+        drawer.classList.add('open');
+        overlay.classList.add('active');
+
+        await loadTerminalOutput(cardId);
+
+        if (autoRefreshCheck.checked) startAutoRefresh();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    // Clean up on close
+    overlay.addEventListener('click', () => {
+        stopAutoRefresh();
+        currentCardId = null;
+    });
+}
+
 // ── Shared Drawer Helpers ───────────────────────────────────────
 
 function closeAllDrawers() {
     document.getElementById('archive-drawer').classList.remove('open');
     document.getElementById('settings-drawer').classList.remove('open');
+    document.getElementById('terminal-drawer').classList.remove('open');
     document.getElementById('drawer-overlay').classList.remove('active');
 }
 

@@ -264,6 +264,29 @@ async def stop_session(request: Request, card_id: str) -> Card:
         await db.close()
 
 
+@router.get("/cards/{card_id}/terminal")
+async def get_terminal_output(request: Request, card_id: str) -> dict:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        row = await _get_card_or_404(db, card_id)
+        card = Card(**row)
+
+        if not card.tmux_session:
+            return {"output": "", "session": None, "alive": False}
+
+        tmux = TmuxManager(request.app.state.config.tmux_socket)
+        alive = tmux.is_session_alive(card.tmux_session)
+        output = tmux.capture_pane(card.tmux_session, lines=100) if alive else ""
+
+        return {
+            "output": output,
+            "session": card.tmux_session,
+            "alive": alive,
+        }
+    finally:
+        await db.close()
+
+
 @router.get("/projects")
 async def list_projects(request: Request) -> list[dict]:
     config = request.app.state.config

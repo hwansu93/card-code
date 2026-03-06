@@ -55,6 +55,11 @@ export function createCardElement(card) {
             <span class="context-gauge-label">${pct.toFixed(0)}%</span>
         </div>`;
 
+        // Terminal view button
+        html += `<button class="btn btn-small btn-ghost terminal-btn" data-card-id="${card.id}" data-card-title="${escapeHtml(card.title)}">
+            <i data-lucide="terminal"></i> Terminal
+        </button>`;
+
         // Inline prompt input
         html += `<div class="card-prompt-input">
             <input type="text" placeholder="Send prompt..." class="prompt-input" data-card-id="${card.id}">
@@ -70,6 +75,15 @@ export function createCardElement(card) {
     }
 
     el.innerHTML = html;
+
+    // Terminal button handler
+    const terminalBtn = el.querySelector('.terminal-btn');
+    if (terminalBtn) {
+        terminalBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.__openTerminalViewer?.(card.id, card.title);
+        });
+    }
 
     // Inline prompt handler
     const promptInput = el.querySelector('.prompt-input');

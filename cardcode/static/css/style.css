@@ -1116,6 +1116,89 @@ dialog textarea {
     margin-left: 12px;
 }
 
+/* --- Terminal Viewer --- */
+
+.drawer-wide {
+    width: 560px;
+}
+
+.terminal-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.terminal-header-info h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.terminal-session-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.terminal-header-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auto-refresh-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.auto-refresh-label input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+
+.terminal-output {
+    flex: 1;
+    overflow: auto;
+    background: #0d0d0d;
+    margin: 0;
+    padding: 0;
+}
+
+.terminal-output pre {
+    margin: 0;
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: #e0e0e0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    min-height: 100%;
+}
+
+/* Light mode terminal stays dark */
+[data-theme="light"] .terminal-output {
+    background: #1a1a2e;
+}
+
+[data-theme="light"] .terminal-output pre {
+    color: #d0d0d0;
+}
+
 /* --- Reduced Motion --- */
 
 @media (prefers-reduced-motion: reduce) {
