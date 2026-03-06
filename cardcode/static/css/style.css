@@ -855,6 +855,267 @@ dialog textarea {
     }
 }
 
+/* --- Drawer --- */
+
+.drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 380px;
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.2);
+}
+
+.drawer-right {
+    right: 0;
+    transform: translateX(100%);
+}
+
+.drawer-right.open {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.drawer-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.drawer-header .drawer-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+.drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.drawer-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Archive card in drawer */
+.archive-card {
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.archive-card:hover {
+    border-color: var(--border-hover);
+}
+
+.archive-card-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.archive-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.archive-card-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+/* Badge on toolbar button */
+.badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Make toolbar buttons position relative for badge */
+.btn-icon {
+    position: relative;
+}
+
+/* --- Settings Form --- */
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.settings-form fieldset {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 0;
+}
+
+.settings-form legend {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: 0 8px;
+}
+
+.settings-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.settings-form label:last-child {
+    margin-bottom: 0;
+}
+
+.settings-form input[type="text"],
+.settings-form input[type="number"] {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.settings-form input[type="text"]:focus,
+.settings-form input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+    outline: none;
+}
+
+.label-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.field-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.integrations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.integration-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+.integration-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.integration-status.ok { background: #22c55e; }
+.integration-status.missing { background: #ef4444; }
+
+.integration-name {
+    font-family: var(--font-mono);
+    font-weight: 500;
+}
+
+.integration-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: auto;
+}
+
+.saved-msg {
+    font-size: 12px;
+    color: var(--success);
+    margin-left: 12px;
+}
+
 /* --- Reduced Motion --- */
 
 @media (prefers-reduced-motion: reduce) {

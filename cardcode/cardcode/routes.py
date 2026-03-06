@@ -7,7 +7,9 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from cardcode.database import get_db
+from cardcode.export import export_board, import_board
 from cardcode.models import Card, CardCreate, CardUpdate, CardMove, QueuedPrompt, generate_ksuid
+from cardcode.project_scanner import scan_projects
 from cardcode.tmux_manager import TmuxManager
 
 router = APIRouter(prefix="/api")
@@ -260,3 +262,89 @@ async def stop_session(request: Request, card_id: str) -> Card:
         return updated
     finally:
         await db.close()
+
+
+@router.get("/projects")
+async def list_projects(request: Request) -> list[dict]:
+    config = request.app.state.config
+    if config.projects_dir:
+        return scan_projects(config.projects_dir)
+    return []
+
+
+@router.get("/cards/archived")
+async def list_archived(request: Request) -> list[Card]:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM cards WHERE column_name = 'archive' ORDER BY completed_at DESC, updated_at DESC"
+        )
+        rows = await cursor.fetchall()
+        return [Card(**dict(row)) for row in rows]
+    finally:
+        await db.close()
+
+
+@router.get("/settings")
+async def get_settings(request: Request) -> dict:
+    config = request.app.state.config
+    return {
+        "claude_dir": str(config.claude_dir),
+        "projects_dir": str(config.projects_dir) if config.projects_dir else "",
+        "data_dir": str(config.data_dir),
+        "port": config.port,
+        "base_path": config.base_path,
+    }
+
+
+@router.post("/settings")
+async def save_settings(request: Request) -> dict:
+    data = await request.json()
+    config_path = request.app.state.config.data_dir / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    lines = ["[cardcode]"]
+    for key in ["claude_dir", "projects_dir", "data_dir", "port", "base_path"]:
+        if key in data and data[key]:
+            val = data[key]
+            if isinstance(val, int) or (isinstance(val, str) and val.isdigit()):
+                lines.append(f'{key} = {val}')
+            else:
+                lines.append(f'{key} = "{val}"')
+
+    config_path.write_text("\n".join(lines) + "\n")
+    return {"status": "saved", "path": str(config_path)}
+
+
+@router.get("/settings/integrations")
+async def check_integrations(request: Request) -> dict:
+    """Check if required tools are available."""
+    import shutil
+    return {
+        "tmux": shutil.which("tmux") is not None,
+        "claude": shutil.which("claude") is not None,
+        "git": shutil.which("git") is not None,
+    }
+
+
+@router.get("/config")
+async def get_config(request: Request) -> dict:
+    config = request.app.state.config
+    return {
+        "port": config.port,
+        "data_dir": str(config.data_dir),
+        "claude_dir": str(config.claude_dir),
+        "projects_dir": str(config.projects_dir) if config.projects_dir else None,
+    }
+
+
+@router.post("/export")
+async def export_data(request: Request) -> dict:
+    return await export_board(request.app.state.config.db_path)
+
+
+@router.post("/import")
+async def import_data(request: Request) -> dict:
+    data = await request.json()
+    count = await import_board(request.app.state.config.db_path, data)
+    return {"imported": count}

@@ -1,13 +1,26 @@
 import { state } from './app.js';
 import { apiPatch } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
+import { closeAllDrawers } from './dialogs.js';
 
 const COLUMNS = ['backlog', 'queue', 'active', 'review', 'done'];
+
+function isDrawerOpen() {
+    return document.querySelector('.drawer.open') !== null;
+}
 
 export function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
         // Don't handle if typing in an input/textarea/select
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+        // Close drawers on Escape before checking dialogs
+        if (e.key === 'Escape' && isDrawerOpen()) {
+            e.preventDefault();
+            closeAllDrawers();
+            return;
+        }
+
         // Don't handle if a dialog is open
         if (document.querySelector('dialog[open]')) {
             if (e.key === 'Escape') {

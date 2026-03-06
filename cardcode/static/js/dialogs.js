@@ -5,6 +5,8 @@ export function setupDialogs() {
     setupCardDialog();
     setupSpawnDialog();
     setupClearDone();
+    setupArchiveDrawer();
+    setupSettingsDrawer();
 }
 
 function setupCardDialog() {
@@ -127,5 +129,219 @@ function setupClearDone() {
         renderBoard(state.cards);
         updateColumnCounts();
         updateEmptyState();
+        refreshArchiveCount();
     });
+}
+
+// ── Archive Drawer ──────────────────────────────────────────────
+
+function setupArchiveDrawer() {
+    const drawer = document.getElementById('archive-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    const archiveBtn = document.getElementById('archive-btn');
+    const closeBtn = document.getElementById('archive-close');
+    const searchInput = document.getElementById('archive-search');
+
+    let archivedCards = [];
+
+    archiveBtn.addEventListener('click', async () => {
+        // Close settings if open
+        document.getElementById('settings-drawer').classList.remove('open');
+
+        await loadArchive();
+        drawer.classList.add('open');
+        overlay.classList.add('active');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+
+    closeBtn.addEventListener('click', closeAllDrawers);
+    overlay.addEventListener('click', closeAllDrawers);
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        renderArchiveList(archivedCards.filter(c =>
+            c.title.toLowerCase().includes(query) ||
+            (c.project || '').toLowerCase().includes(query) ||
+            (c.description || '').toLowerCase().includes(query)
+        ));
+    });
+
+    async function loadArchive() {
+        const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+        const resp = await fetch(`${basePath}/api/cards/archived`);
+        archivedCards = await resp.json();
+        renderArchiveList(archivedCards);
+        updateArchiveCount(archivedCards.length);
+    }
+
+    function renderArchiveList(cards) {
+        const list = document.getElementById('archive-list');
+        if (cards.length === 0) {
+            list.innerHTML = '<div class="drawer-empty">No archived cards</div>';
+            return;
+        }
+        list.innerHTML = cards.map(card => `
+            <div class="archive-card" data-card-id="${card.id}">
+                <div class="archive-card-title">${escapeHtml(card.title)}</div>
+                <div class="archive-card-meta">
+                    ${card.project ? `<span>${escapeHtml(card.project)}</span>` : ''}
+                    <span>$${(card.cost_usd || 0).toFixed(2)}</span>
+                </div>
+                <div class="archive-card-actions">
+                    <button class="btn btn-small btn-ghost restore-btn" data-card-id="${card.id}">
+                        <i data-lucide="undo-2"></i> Restore
+                    </button>
+                    <button class="btn btn-small btn-ghost delete-archive-btn" data-card-id="${card.id}">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        // Restore handlers
+        list.querySelectorAll('.restore-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const cardId = btn.dataset.cardId;
+                const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+                await fetch(`${basePath}/api/cards/${cardId}/move`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column_name: 'backlog', position: Date.now() }),
+                });
+                await loadArchive();
+                // Refresh main board
+                const { apiGet } = await import('./app.js');
+                state.cards = await apiGet('/cards');
+                renderBoard(state.cards);
+                updateColumnCounts();
+            });
+        });
+
+        // Delete handlers
+        list.querySelectorAll('.delete-archive-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm('Permanently delete this card?')) return;
+                const cardId = btn.dataset.cardId;
+                const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+                await fetch(`${basePath}/api/cards/${cardId}`, { method: 'DELETE' });
+                await loadArchive();
+            });
+        });
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Load archive count on init
+    loadArchiveCount();
+
+    async function loadArchiveCount() {
+        const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+        try {
+            const resp = await fetch(`${basePath}/api/cards/archived`);
+            const cards = await resp.json();
+            updateArchiveCount(cards.length);
+        } catch(e) {}
+    }
+}
+
+async function refreshArchiveCount() {
+    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+    try {
+        const resp = await fetch(`${basePath}/api/cards/archived`);
+        const cards = await resp.json();
+        updateArchiveCount(cards.length);
+    } catch(e) {}
+}
+
+function updateArchiveCount(count) {
+    const badge = document.getElementById('archive-count');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// ── Settings Drawer ─────────────────────────────────────────────
+
+function setupSettingsDrawer() {
+    const drawer = document.getElementById('settings-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    const settingsBtn = document.getElementById('settings-btn');
+    const closeBtn = document.getElementById('settings-close');
+    const form = document.getElementById('settings-form');
+    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+
+    settingsBtn.addEventListener('click', async () => {
+        // Close archive if open
+        document.getElementById('archive-drawer').classList.remove('open');
+
+        await loadSettings();
+        await loadIntegrations();
+        drawer.classList.add('open');
+        overlay.classList.add('active');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+
+    closeBtn.addEventListener('click', closeAllDrawers);
+    overlay.addEventListener('click', closeAllDrawers);
+
+    async function loadSettings() {
+        const resp = await fetch(`${basePath}/api/settings`);
+        const settings = await resp.json();
+        Object.entries(settings).forEach(([key, value]) => {
+            const input = form.elements[key];
+            if (input) input.value = value || '';
+        });
+    }
+
+    async function loadIntegrations() {
+        const resp = await fetch(`${basePath}/api/settings/integrations`);
+        const integrations = await resp.json();
+        const container = document.getElementById('integrations-status');
+        container.innerHTML = Object.entries(integrations).map(([name, available]) => `
+            <div class="integration-item">
+                <span class="integration-status ${available ? 'ok' : 'missing'}"></span>
+                <span class="integration-name">${name}</span>
+                <span class="integration-label">${available ? 'Detected' : 'Not found'}</span>
+            </div>
+        `).join('');
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+        if (data.port) data.port = parseInt(data.port, 10);
+
+        await fetch(`${basePath}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        const msg = document.getElementById('settings-saved-msg');
+        msg.style.display = 'inline';
+        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    });
+}
+
+// ── Shared Drawer Helpers ───────────────────────────────────────
+
+function closeAllDrawers() {
+    document.getElementById('archive-drawer').classList.remove('open');
+    document.getElementById('settings-drawer').classList.remove('open');
+    document.getElementById('drawer-overlay').classList.remove('active');
+}
+
+// Export for keyboard.js
+export { closeAllDrawers };
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }

@@ -48,6 +48,13 @@
             <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">
                 <i data-lucide="sun-moon"></i>
             </button>
+            <button id="settings-btn" class="btn btn-icon" title="Settings">
+                <i data-lucide="settings"></i>
+            </button>
+            <button id="archive-btn" class="btn btn-icon" title="Archive">
+                <i data-lucide="archive"></i>
+                <span class="badge" id="archive-count" style="display:none">0</span>
+            </button>
             <button id="keyboard-help" class="btn btn-icon" title="Keyboard shortcuts (?)">
                 <i data-lucide="keyboard"></i>
             </button>
@@ -115,6 +122,73 @@
             </div>
         </div>
     </main>
+
+    <!-- Settings Drawer -->
+    <aside class="drawer drawer-right" id="settings-drawer">
+        <div class="drawer-header">
+            <h3><i data-lucide="settings"></i> Settings</h3>
+            <button class="btn btn-icon drawer-close" id="settings-close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-content">
+            <form id="settings-form" class="settings-form">
+                <fieldset>
+                    <legend>Paths</legend>
+                    <label>
+                        <span class="label-text">Claude Directory</span>
+                        <input type="text" name="claude_dir" placeholder="~/.claude">
+                        <span class="field-hint">Where Claude config and data lives</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Projects Directory</span>
+                        <input type="text" name="projects_dir" placeholder="/path/to/projects">
+                        <span class="field-hint">Root directory containing your git repos</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Data Directory</span>
+                        <input type="text" name="data_dir" placeholder="~/.cardcode">
+                        <span class="field-hint">Where CardCode stores its database</span>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>Server</legend>
+                    <label>
+                        <span class="label-text">Port</span>
+                        <input type="number" name="port" placeholder="8420">
+                    </label>
+                    <label>
+                        <span class="label-text">Base Path</span>
+                        <input type="text" name="base_path" placeholder="/cardcode">
+                        <span class="field-hint">URL prefix for reverse proxy (e.g., /cardcode)</span>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>Integrations</legend>
+                    <div id="integrations-status" class="integrations-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </fieldset>
+                <div class="dialog-actions">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                    <span id="settings-saved-msg" class="saved-msg" style="display:none">Settings saved! Restart server to apply.</span>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Archive Drawer -->
+    <aside class="drawer drawer-right" id="archive-drawer">
+        <div class="drawer-header">
+            <h3><i data-lucide="archive"></i> Archive</h3>
+            <div class="drawer-search">
+                <input type="text" id="archive-search" placeholder="Search archived cards..." class="search-input">
+            </div>
+            <button class="btn btn-icon drawer-close" id="archive-close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-content" id="archive-list">
+            <!-- Cards populated by JS -->
+        </div>
+    </aside>
+    <div class="drawer-overlay" id="drawer-overlay"></div>
 
     <!-- Card Dialog -->
     <dialog id="card-dialog">
