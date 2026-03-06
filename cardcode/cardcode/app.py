@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from cardcode.config import CardCodeConfig, load_config
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
 
 def create_app(overrides: dict | None = None) -> FastAPI:
     config = load_config(overrides=overrides)
-    app = FastAPI(title="CardCode", version="0.1.0", lifespan=lifespan, root_path=config.base_path)
+    app = FastAPI(title="CardCode", version="0.1.0", lifespan=lifespan)
     app.state.config = config
     app.state.ws_manager = ConnectionManager()
 
@@ -50,10 +51,30 @@ def create_app(overrides: dict | None = None) -> FastAPI:
         except WebSocketDisconnect:
             manager.disconnect(websocket)
 
-    # Mount static files if directory exists
+    # Serve static assets with base path support
     static_dir = Path(__file__).parent.parent / "static"
     if static_dir.is_dir():
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+        css_dir = static_dir / "css"
+        js_dir = static_dir / "js"
+        if css_dir.is_dir():
+            app.mount("/css", StaticFiles(directory=css_dir), name="css")
+        if js_dir.is_dir():
+            app.mount("/js", StaticFiles(directory=js_dir), name="js")
+
+        index_html = (static_dir / "index.html").read_text()
+
+        @app.get("/", response_class=HTMLResponse)
+        async def index():
+            bp = config.base_path
+            html = index_html.replace(
+                '<meta name="base-path" content="">',
+                f'<meta name="base-path" content="{bp}">',
+            ).replace(
+                'href="/css/', f'href="{bp}/css/',
+            ).replace(
+                'src="/js/', f'src="{bp}/js/',
+            )
+            return html
 
     return app
 
