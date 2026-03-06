@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from cardcode.config import CardCodeConfig, load_config
 from cardcode.database import init_db
+from cardcode.session_watcher import watcher_loop
 from cardcode.websocket import ConnectionManager
 
 
@@ -15,7 +17,13 @@ from cardcode.websocket import ConnectionManager
 async def lifespan(app: FastAPI):
     config: CardCodeConfig = app.state.config
     await init_db(config.db_path)
+    watcher_task = asyncio.create_task(watcher_loop(config, app.state.ws_manager))
     yield
+    watcher_task.cancel()
+    try:
+        await watcher_task
+    except asyncio.CancelledError:
+        pass
 
 
 def create_app(overrides: dict | None = None) -> FastAPI:
@@ -31,6 +39,16 @@ def create_app(overrides: dict | None = None) -> FastAPI:
     @app.get("/health")
     async def health():
         return {"status": "ok"}
+
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket):
+        manager = app.state.ws_manager
+        await manager.connect(websocket)
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            manager.disconnect(websocket)
 
     # Mount static files if directory exists
     static_dir = Path(__file__).parent.parent / "static"
