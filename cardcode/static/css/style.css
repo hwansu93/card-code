@@ -183,9 +183,8 @@ a {
 }
 
 .logo-icon {
-    width: 20px;
-    height: 20px;
-    color: var(--accent);
+    width: 22px;
+    height: 22px;
     flex-shrink: 0;
 }
 
