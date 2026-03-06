@@ -1,8 +1,8 @@
-# Claude Board — Design Document
+# CardCode — Design Document
 
 ## Overview
 
-Claude Board is a self-hosted web dashboard for managing Claude Code sessions through a Kanban interface. It runs on a remote Linux machine, served over Tailscale, and provides visual project management with live session monitoring, cost tracking, and prompt injection — all without replacing the existing orchestrator workflow, auto-memory, or agent team system.
+CardCode is a self-hosted web dashboard for managing Claude Code sessions through a Kanban interface. It runs on a remote Linux machine, served over Tailscale, and provides visual project management with live session monitoring, cost tracking, and prompt injection — all without replacing the existing orchestrator workflow, auto-memory, or agent team system.
 
 **The core idea:** Cards on a Kanban board represent Claude Code sessions. Drag a card to Active, a Claude session spawns in the right project folder. See its status, cost, and context usage at a glance. Send prompts from the browser. Move to Done when finished.
 
@@ -10,7 +10,7 @@ Claude Board is a self-hosted web dashboard for managing Claude Code sessions th
 
 The user (Danny) runs Claude Code on a remote machine via Termius/tmux over Tailscale. He has evaluated multiple tools (CodeFire, Bosun, Vibe Kanban) and keeps coming back for the same reason: he wants a visual Kanban board for managing work, but every existing tool bundles it with memory systems, agent orchestration, and other features that conflict with his existing sophisticated setup (strict orchestrator pattern, auto-memory, skills, context handoff documents, agent teams).
 
-Claude Board fills the gap: a visual layer on top of his existing workflow, not a replacement for it.
+CardCode fills the gap: a visual layer on top of his existing workflow, not a replacement for it.
 
 ## Key Decisions
 
@@ -37,7 +37,7 @@ Claude Board fills the gap: a visual layer on top of his existing workflow, not 
 │  Remote Machine (Docker)                        │   │
 │                                                 │   │
 │  ┌─────────────────────────────────────────┐    │   │
-│  │  claude-board container                 │    │   │
+│  │  cardcode container                 │    │   │
 │  │                                         │    │   │
 │  │  FastAPI (uvicorn :8420)                │    │   │
 │  │  ├── REST API (card CRUD)               │    │   │
@@ -45,7 +45,7 @@ Claude Board fills the gap: a visual layer on top of his existing workflow, not 
 │  │  ├── SessionWatcher (poll tmux + JSONL) │    │   │
 │  │  └── Static files (HTML/CSS/JS)         │    │   │
 │  │                                         │    │   │
-│  │  SQLite (./data/claude-board.db)        │    │   │
+│  │  SQLite (./data/cardcode.db)        │    │   │
 │  └──────────┬──────────┬───────────────────┘    │   │
 │             │          │                        │   │
 │    mounted volumes:                             │   │
@@ -201,7 +201,7 @@ Slow loop (every 60 seconds):
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  ┌─ Header ────────────────────────────────────────────────────┐ │
-│  │  Claude Board          [Project: All ▾]  [+ New Card]  [?] │ │
+│  │  CardCode          [Project: All ▾]  [+ New Card]  [?] │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 │  ┌─Backlog─┐ ┌─Queue──┐ ┌─Active──┐ ┌─Review─┐ ┌─Done───┐     │
@@ -352,7 +352,7 @@ Handoff notes:
 ## File Structure
 
 ```
-claude-board/
+cardcode/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
@@ -378,7 +378,7 @@ claude-board/
 │       ├── keyboard.js
 │       └── notifications.js
 ├── data/
-│   └── claude-board.db
+│   └── cardcode.db
 └── README.md
 ```
 
@@ -387,7 +387,7 @@ claude-board/
 ```yaml
 # docker-compose.yml
 services:
-  claude-board:
+  cardcode:
     build: .
     ports:
       - "8420:8420"

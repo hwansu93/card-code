@@ -1,4 +1,4 @@
-# Claude Board -- Design Document
+# CardCode -- Design Document
 
 ## Revision History
 
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Claude Board is a self-hosted web dashboard for managing Claude Code sessions through a Kanban interface. Cards represent Claude Code sessions. Drag a card to Active to spawn a tmux session. Live metrics (cost, tokens, context%) update via WebSocket. Inspired by [Kanban Code](https://github.com/langwatch/kanban-code) but built as a web app for cross-device access.
+CardCode is a self-hosted web dashboard for managing Claude Code sessions through a Kanban interface. Cards represent Claude Code sessions. Drag a card to Active to spawn a tmux session. Live metrics (cost, tokens, context%) update via WebSocket. Inspired by [Kanban Code](https://github.com/langwatch/kanban-code) but built as a web app for cross-device access.
 
 The core idea: a visual layer on top of the existing Claude Code workflow, not a replacement for orchestration, auto-memory, or agent teams.
 
@@ -21,7 +21,7 @@ The app is identical in all deployment modes. Docker is optional packaging, not 
 
 | Mode | How | Access |
 |------|-----|--------|
-| Local bare metal | `pip install claude-board` / `python -m claude_board` | localhost:8420 |
+| Local bare metal | `pip install cardcode` / `python -m cardcode` | localhost:8420 |
 | Local Docker | `docker compose up` | localhost:8420 |
 | Remote bare metal | Same as local, behind reverse proxy or Tailscale | https://your-host:8420 |
 | Remote Docker | Containerized + Tailscale | https://nexus:8420 |
@@ -42,8 +42,8 @@ Browser --> FastAPI (uvicorn :8420)
               |     +-- cascade: session_id -> tmux_name -> branch -> project_path
               +-- ProjectScanner (60s loop, discovers projects)
 
-SQLite: ~/.claude-board/board.db
-Config: ~/.claude-board/config.toml (or env vars)
+SQLite: ~/.cardcode/board.db
+Config: ~/.cardcode/config.toml (or env vars)
 ```
 
 ## Configuration
@@ -55,7 +55,7 @@ Single `config.toml` (or env vars) with:
 | `claude_dir` | `~/.claude` | Where Claude data lives |
 | `projects_dir` | auto-detect from git repos | Where projects live |
 | `tmux_socket` | auto-detect | tmux socket path |
-| `data_dir` | `~/.claude-board/` | SQLite + exports location |
+| `data_dir` | `~/.cardcode/` | SQLite + exports location |
 | `port` | `8420` | Server port |
 
 ## Authentication
@@ -79,6 +79,9 @@ CREATE TABLE cards (
     project_path TEXT,
     column_name TEXT NOT NULL DEFAULT 'backlog',  -- backlog|queue|active|review|done|archive
     position REAL NOT NULL DEFAULT 0,  -- float for ordering within column
+
+    -- provider
+    provider TEXT DEFAULT 'claude-code',
 
     -- session link (optional)
     session_id TEXT,
@@ -128,6 +131,15 @@ Design notes:
 - `manual_overrides` as JSON tracks which fields the user set manually so the reconciler never overwrites them
 - `is_launching` flag prevents the reconciler from interfering during session spawn
 - Queued prompts table enables auto-send when a session goes idle
+
+## Provider Abstraction
+
+V1 ships with Claude Code only, but the data model and architecture support multiple providers in the future.
+
+- **SessionProvider interface:** Each provider implements `name`, `spawn()`, `send_prompt()`, `read_status()`, `parse_metrics()`, and `detect_sessions()`
+- **V1: ClaudeCodeProvider only** — talks to Claude Code via tmux, parses JSONL for metrics, detects sessions by tmux prefix
+- **Card table has a `provider` column** (`DEFAULT 'claude-code'`) so cards are tagged from creation. This enables future filtering, per-provider metric parsing, and mixed boards
+- **UI shows a provider badge** on each card (small label, e.g. "claude-code"). No provider picker in the spawn dialog until V2 — the provider is implicit
 
 ## REST API
 
@@ -217,7 +229,7 @@ Single HTML page, vanilla JS + CSS custom properties, SortableJS for drag-drop.
 ```
 +------------------------------------------------------------------+
 |  +- Header -------------------------------------------------------+
-|  |  Claude Board          [Project: All v]  [+ New Card]  [?]    |
+|  |  CardCode          [Project: All v]  [+ New Card]  [?]    |
 |  +----------------------------------------------------------------+
 |                                                                    |
 |  +-Backlog-+ +-Queue--+ +-Active--+ +-Review-+ +-Done---+        |
@@ -319,14 +331,14 @@ Kanban Code inspiration and other ideas for later:
 ## File Structure
 
 ```
-claude_board/
+cardcode/
 |-- pyproject.toml
 |-- Dockerfile
 |-- compose.yaml
 |-- config.example.toml
-|-- claude_board/
+|-- cardcode/
 |   |-- __init__.py
-|   |-- __main__.py          # python -m claude_board
+|   |-- __main__.py          # python -m cardcode
 |   |-- app.py               # FastAPI app factory
 |   |-- config.py            # Config loading (toml + env vars)
 |   |-- database.py          # SQLite + migrations
@@ -361,14 +373,14 @@ claude_board/
 
 ```yaml
 services:
-  claude-board:
+  cardcode:
     build: .
     ports: ["8420:8420"]
     volumes:
       - ${CLAUDE_DIR:-~/.claude}:/data/claude:ro
       - ${PROJECTS_DIR:-/mnt/data/projects}:/data/projects:ro
       - /tmp/tmux-1000:/tmp/tmux-1000
-      - claude_board_data:/app/data
+      - cardcode_data:/app/data
     environment:
       TZ: America/New_York
       CLAUDE_DIR: /data/claude
@@ -383,7 +395,7 @@ services:
       start_period: 10s
 
 volumes:
-  claude_board_data:
+  cardcode_data:
     driver: local
 ```
 
