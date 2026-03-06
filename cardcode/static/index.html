@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CardCode</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='20' rx='6' fill='%23D77757'/%3E%3Crect x='6' y='2' width='6' height='6' rx='3' fill='%23D77757'/%3E%3Crect x='20' y='2' width='6' height='6' rx='3' fill='%23D77757'/%3E%3Cellipse cx='12' cy='16' rx='3' ry='3.5' fill='%231a1a1a'/%3E%3Cellipse cx='20' cy='16' rx='3' ry='3.5' fill='%231a1a1a'/%3E%3Crect x='8' y='25' width='4' height='4' rx='2' fill='%23D77757'/%3E%3Crect x='20' y='25' width='4' height='4' rx='2' fill='%23D77757'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="/img/clawd.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
@@ -21,22 +21,7 @@
     <header class="toolbar">
         <div class="toolbar-left">
             <h1 class="logo">
-                <svg class="logo-icon" width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <!-- Body - rounded rectangle -->
-                    <rect x="4" y="4" width="16" height="14" rx="4" fill="#D77757"/>
-                    <!-- Left ear -->
-                    <rect x="5" y="2" width="4" height="4" rx="2" fill="#D77757"/>
-                    <!-- Right ear -->
-                    <rect x="15" y="2" width="4" height="4" rx="2" fill="#D77757"/>
-                    <!-- Left eye -->
-                    <ellipse cx="9" cy="11" rx="2" ry="2.5" fill="#1a1a1a"/>
-                    <!-- Right eye -->
-                    <ellipse cx="15" cy="11" rx="2" ry="2.5" fill="#1a1a1a"/>
-                    <!-- Left feet -->
-                    <rect x="6" y="17" width="3" height="3" rx="1.5" fill="#D77757"/>
-                    <!-- Right feet -->
-                    <rect x="15" y="17" width="3" height="3" rx="1.5" fill="#D77757"/>
-                </svg>
+                <img src="/img/clawd.png" alt="CardCode" class="logo-icon">
                 CardCode
             </h1>
             <select id="project-filter" class="filter-select">
@@ -90,15 +75,7 @@
         <div class="empty-state hidden" id="empty-state">
             <div class="empty-state-content">
                 <div class="empty-state-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="4" width="16" height="14" rx="4" fill="#D77757"/>
-                        <rect x="5" y="2" width="4" height="4" rx="2" fill="#D77757"/>
-                        <rect x="15" y="2" width="4" height="4" rx="2" fill="#D77757"/>
-                        <ellipse cx="9" cy="11" rx="2" ry="2.5" fill="#1a1a1a"/>
-                        <ellipse cx="15" cy="11" rx="2" ry="2.5" fill="#1a1a1a"/>
-                        <rect x="6" y="17" width="3" height="3" rx="1.5" fill="#D77757"/>
-                        <rect x="15" y="17" width="3" height="3" rx="1.5" fill="#D77757"/>
-                    </svg>
+                    <img src="/img/clawd.png" alt="" class="empty-state-icon-img" width="64" height="64">
                 </div>
                 <h2>Welcome to CardCode</h2>
                 <p>Your Kanban dashboard for Claude Code sessions.</p>
@@ -151,6 +128,11 @@
                 </fieldset>
                 <fieldset>
                     <legend>Server</legend>
+                    <label>
+                        <span class="label-text">Bind Address</span>
+                        <input type="text" name="host" placeholder="0.0.0.0">
+                        <span class="field-hint">0.0.0.0 for all interfaces, 127.0.0.1 for local only</span>
+                    </label>
                     <label>
                         <span class="label-text">Port</span>
                         <input type="number" name="port" placeholder="8420">

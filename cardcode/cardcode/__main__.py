@@ -1,8 +1,15 @@
 import uvicorn
+from cardcode.config import load_config
 
 
 def main():
-    uvicorn.run("cardcode.app:app", host="0.0.0.0", port=8420, reload=True)
+    config = load_config()
+    uvicorn.run(
+        "cardcode.app:app",
+        host=config.host,
+        port=config.port,
+        reload=True,
+    )
 
 
 if __name__ == "__main__":

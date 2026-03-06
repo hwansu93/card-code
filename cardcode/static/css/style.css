@@ -183,9 +183,15 @@ a {
 }
 
 .logo-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
+    border-radius: 4px;
+}
+
+.empty-state-icon-img {
+    margin-bottom: 16px;
+    border-radius: 8px;
 }
 
 .filter-select {

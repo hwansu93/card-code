@@ -316,6 +316,7 @@ async def get_settings(request: Request) -> dict:
         "projects_dir": str(config.projects_dir) if config.projects_dir else "",
         "data_dir": str(config.data_dir),
         "port": config.port,
+        "host": config.host,
         "base_path": config.base_path,
     }
 
@@ -327,7 +328,7 @@ async def save_settings(request: Request) -> dict:
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     lines = ["[cardcode]"]
-    for key in ["claude_dir", "projects_dir", "data_dir", "port", "base_path"]:
+    for key in ["claude_dir", "projects_dir", "data_dir", "port", "host", "base_path"]:
         if key in data and data[key]:
             val = data[key]
             if isinstance(val, int) or (isinstance(val, str) and val.isdigit()):

@@ -60,6 +60,9 @@ def create_app(overrides: dict | None = None) -> FastAPI:
             app.mount("/css", StaticFiles(directory=css_dir), name="css")
         if js_dir.is_dir():
             app.mount("/js", StaticFiles(directory=js_dir), name="js")
+        img_dir = static_dir / "img"
+        if img_dir.is_dir():
+            app.mount("/img", StaticFiles(directory=img_dir), name="img")
 
         index_html = (static_dir / "index.html").read_text()
 
@@ -73,6 +76,10 @@ def create_app(overrides: dict | None = None) -> FastAPI:
                 'href="/css/', f'href="{bp}/css/',
             ).replace(
                 'src="/js/', f'src="{bp}/js/',
+            ).replace(
+                'href="/img/', f'href="{bp}/img/',
+            ).replace(
+                'src="/img/', f'src="{bp}/img/',
             )
             return html
 
