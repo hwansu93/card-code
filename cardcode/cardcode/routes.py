@@ -4,8 +4,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
+from pydantic import BaseModel
+
 from cardcode.database import get_db
-from cardcode.models import Card, CardCreate, CardUpdate, CardMove, generate_ksuid
+from cardcode.models import Card, CardCreate, CardUpdate, CardMove, QueuedPrompt, generate_ksuid
+from cardcode.tmux_manager import TmuxManager
 
 router = APIRouter(prefix="/api")
 
@@ -141,5 +144,119 @@ async def delete_card(request: Request, card_id: str):
             {"type": "card_deleted", "id": card_id}
         )
         return Response(status_code=204)
+    finally:
+        await db.close()
+
+
+class PromptBody(BaseModel):
+    text: str
+
+
+@router.post("/cards/{card_id}/spawn")
+async def spawn_session(request: Request, card_id: str) -> Card:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        row = await _get_card_or_404(db, card_id)
+        card = Card(**row)
+
+        project_path = card.project_path or "."
+        project_name = card.project or "default"
+
+        tmux = TmuxManager(request.app.state.config.tmux_socket)
+        session_name = tmux.spawn_session(
+            project_path=project_path,
+            project_name=project_name,
+            initial_prompt=card.initial_prompt,
+        )
+
+        now = _now()
+        await db.execute(
+            """UPDATE cards SET tmux_session = ?, column_name = 'active',
+               session_status = 'alive', is_launching = 1,
+               started_at = ?, updated_at = ? WHERE id = ?""",
+            (session_name, now, now, card_id),
+        )
+        await db.commit()
+
+        row = await _get_card_or_404(db, card_id)
+        updated = Card(**row)
+
+        await request.app.state.ws_manager.broadcast(
+            {"type": "card_updated", "card": updated.model_dump()}
+        )
+        return updated
+    finally:
+        await db.close()
+
+
+@router.post("/cards/{card_id}/prompt")
+async def send_prompt(request: Request, card_id: str, body: PromptBody) -> dict:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        row = await _get_card_or_404(db, card_id)
+        card = Card(**row)
+
+        if not card.tmux_session:
+            raise HTTPException(status_code=400, detail="No active session")
+
+        tmux = TmuxManager(request.app.state.config.tmux_socket)
+        tmux.send_keys(card.tmux_session, body.text)
+
+        return {"status": "sent", "card_id": card_id}
+    finally:
+        await db.close()
+
+
+@router.post("/cards/{card_id}/queue-prompt", status_code=201)
+async def queue_prompt(request: Request, card_id: str, body: PromptBody) -> QueuedPrompt:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        await _get_card_or_404(db, card_id)
+        prompt_id = generate_ksuid()
+        now = _now()
+
+        await db.execute(
+            """INSERT INTO queued_prompts (id, card_id, prompt_text, status, created_at)
+               VALUES (?, ?, ?, 'pending', ?)""",
+            (prompt_id, card_id, body.text, now),
+        )
+        await db.commit()
+
+        return QueuedPrompt(
+            id=prompt_id, card_id=card_id, prompt_text=body.text,
+            status="pending", created_at=now,
+        )
+    finally:
+        await db.close()
+
+
+@router.post("/cards/{card_id}/stop")
+async def stop_session(request: Request, card_id: str) -> Card:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        row = await _get_card_or_404(db, card_id)
+        card = Card(**row)
+
+        if card.tmux_session:
+            tmux = TmuxManager(request.app.state.config.tmux_socket)
+            try:
+                tmux.kill_session(card.tmux_session)
+            except Exception:
+                pass
+
+        now = _now()
+        await db.execute(
+            "UPDATE cards SET session_status = 'dead', updated_at = ? WHERE id = ?",
+            (now, card_id),
+        )
+        await db.commit()
+
+        row = await _get_card_or_404(db, card_id)
+        updated = Card(**row)
+
+        await request.app.state.ws_manager.broadcast(
+            {"type": "status_changed", "id": card_id, "session_status": "dead"}
+        )
+        return updated
     finally:
         await db.close()

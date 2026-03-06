@@ -1,3 +1,5 @@
+from unittest.mock import patch, MagicMock
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
@@ -84,3 +86,77 @@ async def test_delete_card(client):
 async def test_get_nonexistent_card_returns_404(client):
     resp = await client.patch("/api/cards/nonexistent", json={"title": "X"})
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+@patch("cardcode.routes.TmuxManager")
+async def test_spawn_session(mock_tmux_cls, client):
+    mock_tmux = MagicMock()
+    mock_tmux.spawn_session.return_value = "cc-myapp-abc123"
+    mock_tmux_cls.return_value = mock_tmux
+
+    create = await client.post(
+        "/api/cards",
+        json={"title": "Task", "project": "myapp", "project_path": "/tmp/myapp"},
+    )
+    card_id = create.json()["id"]
+
+    resp = await client.post(f"/api/cards/{card_id}/spawn")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["tmux_session"] == "cc-myapp-abc123"
+    assert data["column_name"] == "active"
+
+
+@pytest.mark.asyncio
+@patch("cardcode.routes.TmuxManager")
+async def test_send_prompt(mock_tmux_cls, client):
+    mock_tmux = MagicMock()
+    mock_tmux.spawn_session.return_value = "cc-proj-abc"
+    mock_tmux_cls.return_value = mock_tmux
+
+    create = await client.post(
+        "/api/cards",
+        json={"title": "Task", "project_path": "/tmp/proj"},
+    )
+    card_id = create.json()["id"]
+    await client.post(f"/api/cards/{card_id}/spawn")
+
+    resp = await client.post(
+        f"/api/cards/{card_id}/prompt",
+        json={"text": "Fix the tests"},
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_queue_prompt(client):
+    create = await client.post("/api/cards", json={"title": "Task"})
+    card_id = create.json()["id"]
+
+    resp = await client.post(
+        f"/api/cards/{card_id}/queue-prompt",
+        json={"text": "Run the linter"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["prompt_text"] == "Run the linter"
+    assert resp.json()["status"] == "pending"
+
+
+@pytest.mark.asyncio
+@patch("cardcode.routes.TmuxManager")
+async def test_stop_session(mock_tmux_cls, client):
+    mock_tmux = MagicMock()
+    mock_tmux.spawn_session.return_value = "cc-proj-abc"
+    mock_tmux_cls.return_value = mock_tmux
+
+    create = await client.post(
+        "/api/cards",
+        json={"title": "Task", "project_path": "/tmp/proj"},
+    )
+    card_id = create.json()["id"]
+    await client.post(f"/api/cards/{card_id}/spawn")
+
+    resp = await client.post(f"/api/cards/{card_id}/stop")
+    assert resp.status_code == 200
+    assert resp.json()["session_status"] == "dead"
