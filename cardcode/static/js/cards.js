@@ -7,9 +7,10 @@ export function createCardElement(card) {
     if (card.session_status) el.classList.add(`card-status-${card.session_status}`);
     if (card.column_name === 'done') el.classList.add('card-done');
 
-    // Status dot for active cards
-    const statusDot = card.session_status
-        ? `<span class="status-dot status-${card.session_status}"></span>`
+    // Status badge for active cards
+    const statusLabels = { alive: 'Active', idle: 'Idle', waiting: 'Waiting', dead: 'Ended' };
+    const statusBadge = card.session_status
+        ? `<span class="status-badge status-${card.session_status}"><span class="status-badge-dot"></span>${statusLabels[card.session_status] || card.session_status}</span>`
         : '';
 
     // Provider badge
@@ -19,7 +20,7 @@ export function createCardElement(card) {
 
     // Title row
     let html = `<div class="card-header">
-        ${statusDot}
+        ${statusBadge}
         <span class="card-title">${escapeHtml(card.title)}</span>
         ${providerBadge}
     </div>`;
