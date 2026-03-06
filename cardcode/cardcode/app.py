@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 def create_app(overrides: dict | None = None) -> FastAPI:
     config = load_config(overrides=overrides)
-    app = FastAPI(title="CardCode", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="CardCode", version="0.1.0", lifespan=lifespan, root_path=config.base_path)
     app.state.config = config
     app.state.ws_manager = ConnectionManager()
 

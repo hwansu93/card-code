@@ -3,7 +3,8 @@ import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, up
 
 export function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${location.host}/ws`;
+    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+    const url = `${protocol}//${location.host}${basePath}/ws`;
     let ws;
     let reconnectDelay = 1000;
     const maxDelay = 30000;

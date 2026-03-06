@@ -8,7 +8,8 @@ export const state = {
 };
 
 // API helpers
-const API = '/api';
+const BASE_PATH = document.querySelector('meta[name="base-path"]')?.content || '';
+const API = `${BASE_PATH}/api`;
 
 export async function apiGet(path) {
     const resp = await fetch(`${API}${path}`);

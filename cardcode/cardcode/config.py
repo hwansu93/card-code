@@ -12,6 +12,7 @@ class CardCodeConfig:
     tmux_socket: str | None = None
     data_dir: Path = field(default_factory=lambda: Path.home() / ".cardcode")
     port: int = 8420
+    base_path: str = ""
 
     @property
     def db_path(self) -> Path:
@@ -28,6 +29,7 @@ def load_config(overrides: dict | None = None) -> CardCodeConfig:
         "CARDCODE_TMUX_SOCKET": ("tmux_socket", str),
         "CARDCODE_DATA_DIR": ("data_dir", Path),
         "CARDCODE_PORT": ("port", int),
+        "CARDCODE_BASE_PATH": ("base_path", str),
     }
 
     for env_key, (field_name, type_fn) in env_map.items():

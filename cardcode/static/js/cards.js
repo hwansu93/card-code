@@ -77,7 +77,8 @@ export function createCardElement(card) {
                 promptInput.value = '';
                 promptInput.disabled = true;
                 try {
-                    await fetch(`/api/cards/${card.id}/prompt`, {
+                    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+                    await fetch(`${basePath}/api/cards/${card.id}/prompt`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text }),
