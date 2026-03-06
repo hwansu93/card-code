@@ -23,16 +23,38 @@ export function renderBoard(cards) {
     Object.entries(grouped).forEach(([col, colCards]) => {
         colCards.sort((a, b) => a.position - b.position);
         const container = document.getElementById(`col-${col}`);
-        colCards.forEach(card => {
-            container.appendChild(createCardElement(card));
-        });
+        if (colCards.length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'column-empty';
+            placeholder.textContent = 'Drag cards here';
+            container.appendChild(placeholder);
+        } else {
+            colCards.forEach(card => {
+                container.appendChild(createCardElement(card));
+            });
+        }
     });
+
+    // Re-render Lucide icons for any new card content
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+export function updateEmptyState() {
+    const emptyEl = document.getElementById('empty-state');
+    if (!emptyEl) return;
+    const totalCards = state.cards.length;
+    if (totalCards === 0) {
+        emptyEl.classList.remove('hidden');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        emptyEl.classList.add('hidden');
+    }
 }
 
 export function updateColumnCounts() {
     COLUMNS.forEach(col => {
         const container = document.getElementById(`col-${col}`);
-        const count = container.children.length;
+        const count = container.querySelectorAll('.card').length;
         const header = container.closest('.column').querySelector('.column-count');
         if (header) header.textContent = count;
     });
@@ -110,8 +132,13 @@ export function addCardToBoard(cardData) {
     state.cards.push(cardData);
     const container = document.getElementById(`col-${cardData.column_name}`);
     if (container) {
+        // Remove empty placeholder if present
+        const placeholder = container.querySelector('.column-empty');
+        if (placeholder) placeholder.remove();
         container.appendChild(createCardElement(cardData));
         updateColumnCounts();
+        updateEmptyState();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
@@ -120,4 +147,5 @@ export function removeCardFromBoard(cardId) {
     if (el) el.remove();
     state.cards = state.cards.filter(c => c.id !== cardId);
     updateColumnCounts();
+    updateEmptyState();
 }

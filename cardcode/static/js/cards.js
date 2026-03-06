@@ -4,6 +4,8 @@ export function createCardElement(card) {
     el.dataset.cardId = card.id;
     el.dataset.position = card.position;
     if (card.id === window.__selectedCardId) el.classList.add('selected');
+    if (card.session_status) el.classList.add(`card-status-${card.session_status}`);
+    if (card.column_name === 'done') el.classList.add('card-done');
 
     // Status dot for active cards
     const statusDot = card.session_status
@@ -45,8 +47,10 @@ export function createCardElement(card) {
         // Context gauge
         const pct = Math.min((card.context_pct || 0) * 100, 100);
         const gaugeClass = pct > 60 ? (pct > 80 ? 'gauge-danger' : 'gauge-warning') : '';
-        html += `<div class="context-gauge ${gaugeClass}">
-            <div class="context-gauge-fill" style="width: ${pct}%"></div>
+        html += `<div class="context-gauge">
+            <div class="context-gauge-bar">
+                <div class="context-gauge-fill ${gaugeClass}" style="width: ${pct}%"></div>
+            </div>
             <span class="context-gauge-label">${pct.toFixed(0)}%</span>
         </div>`;
 

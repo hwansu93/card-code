@@ -1,4 +1,4 @@
-import { renderBoard, setupSortable, updateColumnCounts } from './board.js';
+import { renderBoard, setupSortable, updateColumnCounts, updateEmptyState } from './board.js';
 
 // State
 export const state = {
@@ -52,7 +52,11 @@ async function init() {
     // Render
     renderBoard(state.cards);
     updateColumnCounts();
+    updateEmptyState();
     setupSortable();
+
+    // Render Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // Populate project filter
     const filter = document.getElementById('project-filter');
@@ -68,6 +72,7 @@ async function init() {
         state.cards = await apiGet(project ? `/cards?project=${encodeURIComponent(project)}` : '/cards');
         renderBoard(state.cards);
         updateColumnCounts();
+        updateEmptyState();
     });
 
     // Theme toggle

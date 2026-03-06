@@ -1,6 +1,6 @@
 import { state } from './app.js';
 import { apiPatch } from './app.js';
-import { renderBoard, updateColumnCounts } from './board.js';
+import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 
 const COLUMNS = ['backlog', 'queue', 'active', 'review', 'done'];
 
@@ -18,21 +18,27 @@ export function setupKeyboard() {
 
         switch (e.key) {
             case 'n':
+                e.preventDefault();
                 document.getElementById('new-card-btn').click();
                 break;
             case 'j':
+                e.preventDefault();
                 moveSelection(1);
                 break;
             case 'k':
+                e.preventDefault();
                 moveSelection(-1);
                 break;
             case 'h':
+                e.preventDefault();
                 moveColumn(-1);
                 break;
             case 'l':
+                e.preventDefault();
                 moveColumn(1);
                 break;
             case 'Enter':
+                e.preventDefault();
                 if (state.selectedCardId) {
                     window.__openCardDialog?.(state.selectedCardId);
                 }
@@ -54,9 +60,11 @@ export function setupKeyboard() {
                 document.getElementById('project-filter').focus();
                 break;
             case '?':
+                e.preventDefault();
                 document.getElementById('keyboard-dialog').showModal();
                 break;
             case 'Escape':
+                e.preventDefault();
                 deselectAll();
                 break;
         }

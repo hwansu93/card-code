@@ -25,9 +25,13 @@
             </select>
         </div>
         <div class="toolbar-right">
-            <button id="new-card-btn" class="btn btn-primary">+ New Card</button>
-            <button id="theme-toggle" class="btn btn-icon" title="Toggle theme"></button>
-            <button id="keyboard-help" class="btn btn-icon" title="Keyboard shortcuts (?)"></button>
+            <button id="new-card-btn" class="btn btn-primary"><i data-lucide="plus"></i> New Card</button>
+            <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">
+                <i data-lucide="sun-moon"></i>
+            </button>
+            <button id="keyboard-help" class="btn btn-icon" title="Keyboard shortcuts (?)">
+                <i data-lucide="keyboard"></i>
+            </button>
         </div>
     </header>
 
@@ -51,9 +55,35 @@
         <div class="column" data-column="done">
             <div class="column-header">
                 <h2>Done</h2><span class="column-count">0</span>
-                <button class="btn btn-small btn-ghost" id="clear-done">Clear</button>
+                <button class="btn btn-small btn-ghost" id="clear-done"><i data-lucide="archive"></i> Clear</button>
             </div>
             <div class="column-cards" id="col-done"></div>
+        </div>
+
+        <!-- Empty State Overlay -->
+        <div class="empty-state hidden" id="empty-state">
+            <div class="empty-state-content">
+                <div class="empty-state-icon"><i data-lucide="layout-dashboard"></i></div>
+                <h2>Welcome to CardCode</h2>
+                <p>Your Kanban dashboard for Claude Code sessions.</p>
+                <div class="empty-state-steps">
+                    <div class="step">
+                        <span class="step-key">N</span>
+                        <span>Create your first card</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-key">Drag</span>
+                        <span>Move cards between columns to manage workflow</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-key">?</span>
+                        <span>View all keyboard shortcuts</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="document.getElementById('new-card-btn').click()">
+                    Create First Card
+                </button>
+            </div>
         </div>
     </main>
 
@@ -106,6 +136,7 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="/js/app.js"></script>
 </body>
 </html>

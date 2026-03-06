@@ -1,5 +1,5 @@
 import { state, apiPost, apiPatch, apiDelete } from './app.js';
-import { renderBoard, updateColumnCounts, addCardToBoard } from './board.js';
+import { renderBoard, updateColumnCounts, updateEmptyState, addCardToBoard } from './board.js';
 
 export function setupDialogs() {
     setupCardDialog();
@@ -46,6 +46,7 @@ function setupCardDialog() {
             state.cards = await apiGet('/cards');
             renderBoard(state.cards);
             updateColumnCounts();
+            updateEmptyState();
         } catch (err) {
             console.error('Save failed:', err);
         }
@@ -57,12 +58,12 @@ function setupCardDialog() {
         if (!card) return;
         editingCardId = cardId;
         titleEl.textContent = 'Edit Card';
+        populateProjectSelect();
         form.elements.title.value = card.title || '';
         form.elements.description.value = card.description || '';
         form.elements.project.value = card.project || '';
         form.elements.initial_prompt.value = card.initial_prompt || '';
         form.elements.handoff_notes.value = card.handoff_notes || '';
-        populateProjectSelect();
         dialog.showModal();
     };
 }
@@ -99,6 +100,7 @@ function setupSpawnDialog() {
             state.cards = await apiGet('/cards');
             renderBoard(state.cards);
             updateColumnCounts();
+            updateEmptyState();
         } catch (err) {
             console.error('Spawn failed:', err);
         }
@@ -124,5 +126,6 @@ function setupClearDone() {
         state.cards = state.cards.filter(c => c.column_name !== 'done');
         renderBoard(state.cards);
         updateColumnCounts();
+        updateEmptyState();
     });
 }
