@@ -1,0 +1,19 @@
+services:
+  cardcode:
+    build: .
+    ports:
+      - "8420:8420"
+    environment:
+      TZ: America/New_York
+      CARDCODE_CLAUDE_DIR: /claude
+      CARDCODE_PROJECTS_DIR: /projects
+      CARDCODE_DATA_DIR: /data
+    volumes:
+      - ${HOME}/.claude:/claude:ro
+      - ${PROJECTS_DIR:-/mnt/data/projects}:/projects:ro
+      - cardcode_data:/data
+      - /tmp/tmux-1000:/tmp/tmux-1000
+    restart: unless-stopped
+
+volumes:
+  cardcode_data:
