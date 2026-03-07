@@ -1,10 +1,5 @@
 import { state } from './app.js';
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
+import { escapeHtml } from './utils.js';
 
 function dismissToast(toast) {
     toast.classList.add('toast-exit');

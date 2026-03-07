@@ -1,6 +1,7 @@
 import { createCardElement } from './cards.js';
 import { apiPatch, apiPost, apiDelete, apiGet } from './app.js';
 import { state } from './app.js';
+import { showToast } from './notifications.js';
 
 const COLLAPSE_KEY = 'cardcode-collapsed-columns';
 
@@ -47,6 +48,8 @@ export function renderBoard(cards) {
         colEl.className = 'column' + (isCollapsed ? ' collapsed' : '');
         colEl.dataset.column = col.name;
         colEl.dataset.columnId = col.id;
+        colEl.setAttribute('role', 'region');
+        colEl.setAttribute('aria-label', `${col.name} column`);
 
         // Header
         const header = document.createElement('div');
@@ -56,12 +59,15 @@ export function renderBoard(cards) {
         const collapseBtn = document.createElement('button');
         collapseBtn.className = 'btn btn-icon-sm collapse-toggle';
         collapseBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+        collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+        collapseBtn.setAttribute('aria-label', `Collapse ${col.name}`);
         collapseBtn.innerHTML = `<i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-left'}"></i>`;
         collapseBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const nowCollapsed = !colEl.classList.contains('collapsed');
             colEl.classList.toggle('collapsed');
             setCollapsed(col.name, nowCollapsed);
+            collapseBtn.setAttribute('aria-expanded', String(!nowCollapsed));
             const icon = collapseBtn.querySelector('i');
             icon.setAttribute('data-lucide', nowCollapsed ? 'chevron-right' : 'chevron-left');
             collapseBtn.title = nowCollapsed ? 'Expand' : 'Collapse';
@@ -97,6 +103,7 @@ export function renderBoard(cards) {
         const body = document.createElement('div');
         body.className = 'column-cards';
         body.id = `col-${col.name}`;
+        body.setAttribute('role', 'list');
 
         if (colCards.length === 0) {
             const placeholder = document.createElement('div');
@@ -155,6 +162,7 @@ function startRename(col, nameEl) {
                     setupSortable();
                 } catch (err) {
                     console.error('Rename failed:', err);
+                    showToast({ title: 'Failed to rename column', type: 'error' });
                     nameEl.textContent = col.name.charAt(0).toUpperCase() + col.name.slice(1);
                 }
             } else {
@@ -181,9 +189,11 @@ function showColumnMenu(col, anchorEl, cardCount) {
 
     const menu = document.createElement('div');
     menu.className = 'column-context-menu';
+    menu.setAttribute('role', 'menu');
 
     const deleteItem = document.createElement('button');
     deleteItem.className = 'column-menu-item column-menu-item-danger';
+    deleteItem.setAttribute('role', 'menuitem');
     deleteItem.innerHTML = '<i data-lucide="trash-2"></i> Delete column';
     deleteItem.addEventListener('click', async () => {
         menu.remove();
@@ -200,6 +210,7 @@ function showColumnMenu(col, anchorEl, cardCount) {
             setupSortable();
         } catch (err) {
             console.error('Delete column failed:', err);
+            showToast({ title: 'Failed to delete column', type: 'error' });
         }
     });
 
@@ -241,6 +252,7 @@ function showAddColumnInput(addBtn) {
             setupSortable();
         } catch (err) {
             console.error('Add column failed:', err);
+            showToast({ title: 'Failed to create column', type: 'error' });
             form.replaceWith(addBtn);
         }
     };
@@ -377,6 +389,7 @@ export function setupSortable() {
                     state.columns = await apiGet('/columns');
                 } catch (err) {
                     console.error('Column reorder failed:', err);
+                    showToast({ title: 'Failed to reorder columns', type: 'error' });
                     renderBoard(state.cards);
                 }
             },

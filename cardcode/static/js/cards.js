@@ -1,11 +1,15 @@
 import { state, apiPatch } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
+import { escapeHtml } from './utils.js';
+import { showToast } from './notifications.js';
 
 export function createCardElement(card) {
     const el = document.createElement('div');
     el.className = 'card';
     el.dataset.cardId = card.id;
     el.dataset.position = card.position;
+    el.setAttribute('role', 'article');
+    el.setAttribute('aria-label', card.title);
     if (card.id === window.__selectedCardId) el.classList.add('selected');
     if (card.session_status) el.classList.add(`card-status-${card.session_status}`);
     if (card.column_name === 'done') el.classList.add('card-done');
@@ -78,6 +82,7 @@ function showCardContextMenu(e, card) {
 
     const menu = document.createElement('div');
     menu.className = 'card-context-menu';
+    menu.setAttribute('role', 'menu');
     menu.style.left = `${e.clientX}px`;
     menu.style.top = `${e.clientY}px`;
 
@@ -92,6 +97,7 @@ function showCardContextMenu(e, card) {
     items.forEach(item => {
         const el = document.createElement('div');
         el.className = 'card-context-menu-item';
+        el.setAttribute('role', 'menuitem');
         el.textContent = item.label;
         el.addEventListener('click', (ev) => {
             ev.stopPropagation();
@@ -158,6 +164,11 @@ async function handleQuickAction(action, card) {
         }
     } catch (err) {
         console.error(`Quick action "${action}" failed:`, err);
+        if (action === 'archive') {
+            showToast({ title: 'Failed to archive card', type: 'error' });
+        } else if (action === 'move-next') {
+            showToast({ title: 'Failed to move card', type: 'error' });
+        }
     }
 }
 
@@ -171,10 +182,4 @@ function timeAgo(isoString) {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }

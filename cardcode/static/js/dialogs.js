@@ -1,5 +1,7 @@
 import { state, apiPost, apiPatch } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
+import { escapeHtml } from './utils.js';
+import { showToast } from './notifications.js';
 
 export function setupDialogs() {
     setupCardDialog();
@@ -425,6 +427,7 @@ function setupTerminalViewer() {
                 term.clear();
                 term.write('Failed to load terminal output');
             }
+            showToast({ title: 'Terminal load failed', type: 'error' });
         }
     }
 
@@ -559,9 +562,3 @@ function closeAllDrawers() {
 
 // Export for keyboard.js
 export { closeAllDrawers };
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
