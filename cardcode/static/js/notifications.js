@@ -25,6 +25,12 @@ export function showToast({ title, message, type = 'info', duration = 5000 }) {
     `;
 
     toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(toast));
+
+    const existing = container.querySelectorAll('.toast:not(.toast-exit)');
+    if (existing.length >= 5) {
+        dismissToast(existing[0]);
+    }
+
     container.appendChild(toast);
     if (typeof lucide !== 'undefined') lucide.createIcons({ root: toast });
 

@@ -293,7 +293,20 @@ function setupSettingsDrawer() {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const data = Object.fromEntries(new FormData(form));
+        const formData = Object.fromEntries(new FormData(form));
+
+        const port = parseInt(formData.port);
+        if (formData.port && (isNaN(port) || port < 1 || port > 65535)) {
+            showToast({ title: 'Invalid port number', message: 'Must be between 1 and 65535', type: 'error' });
+            return;
+        }
+        const poll = parseInt(formData.poll_interval);
+        if (formData.poll_interval && (isNaN(poll) || poll < 500 || poll > 30000)) {
+            showToast({ title: 'Invalid poll interval', message: 'Must be between 500 and 30000ms', type: 'error' });
+            return;
+        }
+
+        const data = formData;
         if (data.port) data.port = parseInt(data.port, 10);
 
         await fetch(`${basePath}/api/settings`, {
@@ -314,6 +327,33 @@ let term = null;
 let fitAddon = null;
 let searchAddon = null;
 
+function getTerminalTheme() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        background: style.getPropertyValue('--terminal-bg').trim() || '#0f1014',
+        foreground: style.getPropertyValue('--terminal-fg').trim() || '#e8e6e3',
+        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#e5853d',
+        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(229, 133, 61, 0.3)',
+        // Standard ANSI colors (these stay constant across themes)
+        black: '#1a1c24',
+        red: '#ef4444',
+        green: '#4ade80',
+        yellow: '#fbbf24',
+        blue: '#60a5fa',
+        magenta: '#c084fc',
+        cyan: '#22d3ee',
+        white: '#e8e6e3',
+        brightBlack: '#5c5955',
+        brightRed: '#f87171',
+        brightGreen: '#86efac',
+        brightYellow: '#fde68a',
+        brightBlue: '#93c5fd',
+        brightMagenta: '#d8b4fe',
+        brightCyan: '#67e8f9',
+        brightWhite: '#f5f5f4',
+    };
+}
+
 function initXterm() {
     const container = document.getElementById('terminal-xterm-container');
     if (!container || term) return;
@@ -326,28 +366,7 @@ function initXterm() {
         fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
         lineHeight: 1.4,
         scrollback: 5000,
-        theme: {
-            background: '#0f1014',
-            foreground: '#e8e6e3',
-            cursor: '#e5853d',
-            selectionBackground: 'rgba(229, 133, 61, 0.3)',
-            black: '#1a1c24',
-            red: '#ef4444',
-            green: '#4ade80',
-            yellow: '#fbbf24',
-            blue: '#60a5fa',
-            magenta: '#c084fc',
-            cyan: '#22d3ee',
-            white: '#e8e6e3',
-            brightBlack: '#5c5955',
-            brightRed: '#f87171',
-            brightGreen: '#86efac',
-            brightYellow: '#fde68a',
-            brightBlue: '#93c5fd',
-            brightMagenta: '#d8b4fe',
-            brightCyan: '#67e8f9',
-            brightWhite: '#f5f5f4',
-        },
+        theme: getTerminalTheme(),
     });
 
     fitAddon = new FitAddon.FitAddon();
@@ -477,6 +496,12 @@ function setupTerminalViewer() {
     window.addEventListener('resize', () => {
         if (fitAddon && term) fitAddon.fit();
     });
+
+    // Update terminal theme when data-theme attribute changes
+    const themeObserver = new MutationObserver(() => {
+        if (term) term.options.theme = getTerminalTheme();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     // Expose globally for card click handler
     window.__openTerminalViewer = async (cardId, cardTitle) => {

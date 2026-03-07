@@ -116,7 +116,10 @@ function selectCard(cardId) {
     deselectAll();
     state.selectedCardId = cardId;
     const el = document.querySelector(`[data-card-id="${cardId}"]`);
-    if (el) el.classList.add('selected');
+    if (el) {
+        el.classList.add('selected');
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
 }
 
 function deselectAll() {

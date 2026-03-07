@@ -14,6 +14,8 @@ export function connectWebSocket() {
     function setStatus(status) {
         if (!statusDot) return;
         statusDot.className = `connection-dot ${status}`;
+        statusDot.title = status.charAt(0).toUpperCase() + status.slice(1);
+        statusDot.setAttribute('aria-label', `Connection status: ${status}`);
     }
 
     function connect() {
