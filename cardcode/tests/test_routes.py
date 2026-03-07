@@ -144,6 +144,120 @@ async def test_queue_prompt(client):
 
 
 @pytest.mark.asyncio
+async def test_list_columns_returns_defaults(client):
+    resp = await client.get("/api/columns")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 5
+    names = [c["name"] for c in data]
+    assert names == ["backlog", "queue", "active", "review", "done"]
+
+
+@pytest.mark.asyncio
+async def test_create_column(client):
+    resp = await client.post("/api/columns", json={"name": "testing"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["name"] == "testing"
+    assert data["position"] == 6.0
+    assert data["id"]
+
+    # Verify it appears in the list
+    resp = await client.get("/api/columns")
+    assert len(resp.json()) == 6
+
+
+@pytest.mark.asyncio
+async def test_create_column_duplicate_name(client):
+    resp = await client.post("/api/columns", json={"name": "backlog"})
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_rename_column(client):
+    # Get existing columns to find an ID
+    resp = await client.get("/api/columns")
+    col = resp.json()[0]
+
+    resp = await client.patch(f"/api/columns/{col['id']}", json={"name": "renamed"})
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "renamed"
+
+
+@pytest.mark.asyncio
+async def test_patch_column_position(client):
+    resp = await client.get("/api/columns")
+    col = resp.json()[0]
+
+    resp = await client.patch(f"/api/columns/{col['id']}", json={"position": 99.0})
+    assert resp.status_code == 200
+    assert resp.json()["position"] == 99.0
+
+
+@pytest.mark.asyncio
+async def test_patch_nonexistent_column_returns_404(client):
+    resp = await client.patch("/api/columns/nonexistent", json={"name": "x"})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_patch_column_duplicate_name_returns_409(client):
+    resp = await client.get("/api/columns")
+    columns = resp.json()
+    # Try to rename the second column to the first column's name
+    resp = await client.patch(
+        f"/api/columns/{columns[1]['id']}", json={"name": columns[0]["name"]}
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_delete_column_moves_cards(client):
+    # Get columns
+    resp = await client.get("/api/columns")
+    columns = resp.json()
+    # "review" is at index 3
+    review_col = next(c for c in columns if c["name"] == "review")
+
+    # Create a card in the review column
+    card_resp = await client.post(
+        "/api/cards", json={"title": "Review Card", "column_name": "review"}
+    )
+    card_id = card_resp.json()["id"]
+
+    # Delete the review column
+    resp = await client.delete(f"/api/columns/{review_col['id']}")
+    assert resp.status_code == 204
+
+    # Verify column count decreased
+    resp = await client.get("/api/columns")
+    assert len(resp.json()) == 4
+
+    # Verify card moved to first column (backlog)
+    resp = await client.get(f"/api/cards")
+    cards = resp.json()
+    card = next(c for c in cards if c["id"] == card_id)
+    assert card["column_name"] == "backlog"
+
+
+@pytest.mark.asyncio
+async def test_delete_last_column_returns_400(client):
+    # Delete all columns except one
+    resp = await client.get("/api/columns")
+    columns = resp.json()
+    for col in columns[1:]:
+        resp = await client.delete(f"/api/columns/{col['id']}")
+        assert resp.status_code == 204
+
+    # Try to delete the last one
+    resp = await client.get("/api/columns")
+    assert len(resp.json()) == 1
+    last_col = resp.json()[0]
+    resp = await client.delete(f"/api/columns/{last_col['id']}")
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 @patch("cardcode.routes.TmuxManager")
 async def test_stop_session(mock_tmux_cls, client):
     mock_tmux = MagicMock()

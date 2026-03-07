@@ -3,15 +3,17 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
+from sqlite3 import IntegrityError
+
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from pydantic import BaseModel
 
 _ANSI_RE = re.compile(r'\x1b[\[\(][0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x0f|\x0e')
 
-from cardcode.database import get_db
+from cardcode.database import get_db, get_columns, get_column_by_name, create_column, update_column
 from cardcode.export import export_board, import_board
-from cardcode.models import Card, CardCreate, CardUpdate, CardMove, QueuedPrompt, generate_ksuid
+from cardcode.models import Card, CardCreate, CardUpdate, CardMove, Column, ColumnCreate, ColumnUpdate, QueuedPrompt, generate_ksuid
 from cardcode.project_scanner import scan_projects
 from cardcode.tmux_manager import TmuxManager
 
@@ -297,6 +299,114 @@ async def get_terminal_output(request: Request, card_id: str) -> dict:
             "session": card.tmux_session,
             "alive": alive,
         }
+    finally:
+        await db.close()
+
+
+async def _get_column_or_404(db, column_id: str) -> dict:
+    cursor = await db.execute("SELECT * FROM columns WHERE id = ?", (column_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Column not found")
+    return dict(row)
+
+
+@router.get("/columns")
+async def list_columns(request: Request) -> list[Column]:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        rows = await get_columns(db)
+        return [Column(**dict(row)) for row in rows]
+    finally:
+        await db.close()
+
+
+@router.post("/columns", status_code=201)
+async def create_column_endpoint(request: Request, body: ColumnCreate) -> Column:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        existing = await get_column_by_name(db, body.name)
+        if existing:
+            raise HTTPException(status_code=409, detail="Column name already exists")
+
+        col_id = generate_ksuid()
+
+        cursor = await db.execute("SELECT COALESCE(MAX(position), 0) + 1.0 FROM columns")
+        row = await cursor.fetchone()
+        assert row is not None
+        position = row[0]
+
+        await create_column(db, col_id, body.name, position)
+
+        row_data = await _get_column_or_404(db, col_id)
+        col = Column(**row_data)
+
+        await request.app.state.ws_manager.broadcast(
+            {"type": "column_created", "column": col.model_dump()}
+        )
+        return col
+    finally:
+        await db.close()
+
+
+@router.patch("/columns/{column_id}")
+async def update_column_endpoint(request: Request, column_id: str, body: ColumnUpdate) -> Column:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        await _get_column_or_404(db, column_id)
+
+        updates = body.model_dump(exclude_none=True)
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        try:
+            await update_column(db, column_id, name=body.name, position=body.position)
+        except IntegrityError:
+            raise HTTPException(status_code=409, detail="Column name already exists")
+
+        row_data = await _get_column_or_404(db, column_id)
+        col = Column(**row_data)
+
+        await request.app.state.ws_manager.broadcast(
+            {"type": "column_updated", "column": col.model_dump()}
+        )
+        return col
+    finally:
+        await db.close()
+
+
+@router.delete("/columns/{column_id}", status_code=204)
+async def delete_column_endpoint(request: Request, column_id: str):
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        col_row = await _get_column_or_404(db, column_id)
+
+        all_cols = await get_columns(db)
+        if len(all_cols) <= 1:
+            raise HTTPException(status_code=400, detail="Cannot delete the last column")
+
+        # Find the first column by position (excluding the one being deleted)
+        first_col = None
+        for c in all_cols:
+            c_dict = dict(c)
+            if c_dict["id"] != column_id:
+                first_col = c_dict
+                break
+
+        # Move cards and delete column in a single transaction
+        col_name = col_row["name"]
+        assert first_col is not None
+        await db.execute(
+            "UPDATE cards SET column_name = ? WHERE column_name = ?",
+            (first_col["name"], col_name),
+        )
+        await db.execute("DELETE FROM columns WHERE id = ?", (column_id,))
+        await db.commit()
+
+        await request.app.state.ws_manager.broadcast(
+            {"type": "column_deleted", "id": column_id}
+        )
+        return Response(status_code=204)
     finally:
         await db.close()
 
