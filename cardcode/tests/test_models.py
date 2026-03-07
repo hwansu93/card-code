@@ -1,4 +1,11 @@
-from cardcode.models import CardCreate, Card, CardUpdate, CardMove, generate_ksuid
+import pytest
+from pydantic import ValidationError
+
+from cardcode.models import (
+    CardCreate, Card, CardUpdate, CardMove,
+    Column, ColumnCreate, ColumnUpdate,
+    generate_ksuid,
+)
 
 
 def test_generate_ksuid_is_string():
@@ -64,3 +71,49 @@ def test_card_move():
     move = CardMove(column_name="active", position=1.5)
     assert move.column_name == "active"
     assert move.position == 1.5
+
+
+def test_column_model():
+    col = Column(id="col_1", name="backlog", position=0.0, created_at="2026-03-07T00:00:00Z")
+    assert col.id == "col_1"
+    assert col.name == "backlog"
+    assert col.position == 0.0
+    assert col.created_at == "2026-03-07T00:00:00Z"
+
+
+def test_column_create_valid():
+    cc = ColumnCreate(name="active")
+    assert cc.name == "active"
+
+
+def test_column_create_rejects_empty():
+    with pytest.raises(ValidationError):
+        ColumnCreate(name="")
+
+
+def test_column_create_rejects_long_name():
+    with pytest.raises(ValidationError):
+        ColumnCreate(name="x" * 51)
+
+
+def test_column_update_partial_name():
+    cu = ColumnUpdate(name="new name")
+    assert cu.name == "new name"
+    assert cu.position is None
+
+
+def test_column_update_partial_position():
+    cu = ColumnUpdate(position=2.5)
+    assert cu.name is None
+    assert cu.position == 2.5
+
+
+def test_column_update_both():
+    cu = ColumnUpdate(name="done", position=3.0)
+    assert cu.name == "done"
+    assert cu.position == 3.0
+
+
+def test_column_update_rejects_empty_name():
+    with pytest.raises(ValidationError):
+        ColumnUpdate(name="")

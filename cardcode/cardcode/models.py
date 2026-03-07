@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import struct
 import time
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 _last_ts: int = 0
@@ -87,6 +87,23 @@ class Card(BaseModel):
     completed_at: str | None = None
     updated_at: str
     model_config = {"from_attributes": True}
+
+
+class Column(BaseModel):
+    id: str
+    name: str
+    position: float
+    created_at: str
+    model_config = {"from_attributes": True}
+
+
+class ColumnCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=50)
+
+
+class ColumnUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=50)
+    position: float | None = None
 
 
 class QueuedPrompt(BaseModel):
