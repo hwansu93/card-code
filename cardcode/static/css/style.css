@@ -49,7 +49,7 @@ a:hover {
 }
 
 /* Mono for code/metrics/terminal */
-.mono, code, pre, .card-metrics, .terminal-input {
+.mono, code, pre, .card-status-bar, .terminal-input {
     font-family: 'JetBrains Mono', 'SF Mono', monospace;
 }
 
@@ -624,7 +624,7 @@ a:hover {
     border: 1px solid var(--border);
     border-left: 3px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: 12px 14px;
+    padding: 10px 12px;
     cursor: grab;
     transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out, background 150ms ease-out;
     animation: cardEntrance 200ms ease-out;
@@ -662,103 +662,101 @@ a:hover {
     border-left-color: var(--status-dead);
 }
 
-/* --- Card Header --- */
-
-.card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.card-title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
+/* --- Card Title (Tier 1 — dominant) --- */
 
 .card-title {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
     line-height: 1.4;
-    flex: 1;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* Card icon */
-.card-icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-/* --- Card Project Label --- */
-
-.card-project {
-    display: inline-block;
-    padding: 1px 8px;
-    margin-bottom: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: var(--bg-tertiary);
-    border-radius: 4px;
-    letter-spacing: 0.01em;
-}
-
-.card-description {
-    font-size: 12px;
-    color: var(--text-secondary);
-    line-height: 1.4;
-    margin-bottom: 8px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
+/* --- Card Metadata (Tier 2 — project + time) --- */
 
 .card-meta {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1;
 }
 
-/* Active card metrics */
-.card-metrics {
+.card-meta-project {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.card-meta-time {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* --- Card Status Bar (Tier 3 — compact inline metrics) --- */
+
+.card-status-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text-muted);
+    line-height: 1;
 }
 
-.card-metrics .metric {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.card-status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
 }
 
-/* Card quick actions — appear on hover */
-.card-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 150ms ease-out;
+.card-status-dot-alive { background: var(--status-alive); }
+.card-status-dot-waiting { background: var(--status-waiting); }
+.card-status-dot-idle { background: var(--status-idle); }
+.card-status-dot-dead { background: var(--status-dead); }
+
+.card-status-sep {
+    color: var(--text-muted);
+    opacity: 0.4;
+    user-select: none;
 }
 
-.card:hover .card-actions {
-    opacity: 1;
+.card-status-bar .context-warning { color: var(--warning); }
+.card-status-bar .context-danger { color: var(--danger); }
+
+/* --- Card Context Menu --- */
+
+.card-context-menu {
+    position: fixed;
+    z-index: 9999;
+    min-width: 160px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    padding: 4px 0;
+}
+
+.card-context-menu-item {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 100ms ease-out;
+}
+
+.card-context-menu-item:hover {
+    background: var(--bg-tertiary);
 }
 
 .card-prompt-input {
@@ -792,7 +790,7 @@ a:hover {
     color: var(--text-secondary);
 }
 
-.card.card-done .card-metrics {
+.card.card-done .card-status-bar {
     color: var(--text-muted);
 }
 

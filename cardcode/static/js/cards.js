@@ -1,8 +1,6 @@
 import { state, apiPatch } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 
-const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
-
 export function createCardElement(card) {
     const el = document.createElement('div');
     el.className = 'card';
@@ -14,85 +12,50 @@ export function createCardElement(card) {
 
     let html = '';
 
-    // 1. Project tag — colored pill at top-left
-    if (card.project) {
-        html += `<div class="card-project-tag">${escapeHtml(card.project)}</div>`;
+    // Tier 1 — Title (dominant)
+    html += `<div class="card-title">${escapeHtml(card.title)}</div>`;
+
+    // Tier 2 — Metadata (project + relative time)
+    const project = card.project ? escapeHtml(card.project) : '';
+    const ago = timeAgo(card.updated_at);
+    if (project || ago) {
+        html += `<div class="card-meta">
+            <span class="card-meta-project">${project}</span>
+            <span class="card-meta-time">${ago}</span>
+        </div>`;
     }
 
-    // 2. Title row — icon + title
-    const cardIcon = (card.provider === 'claude-code' || card.tmux_session || card.is_external)
-        ? `<img src="${basePath}/img/cardcode-icon.svg" class="card-icon" alt="">`
-        : '';
-    html += `<div class="card-header">
-        ${cardIcon}
-        <span class="card-title">${escapeHtml(card.title)}</span>
-    </div>`;
-
-    // 3. Description preview — backlog/queue only, 2-line clamp
-    if (['backlog', 'queue'].includes(card.column_name) && card.description) {
-        const preview = card.description.length > 80
-            ? card.description.slice(0, 80) + '...'
-            : card.description;
-        html += `<div class="card-description">${escapeHtml(preview)}</div>`;
+    // Tier 3 — Status bar (compact inline metrics)
+    const statusParts = [];
+    if (card.session_status) {
+        statusParts.push(`<span class="card-status-dot card-status-dot-${card.session_status}"></span><span>${card.session_status}</span>`);
     }
-
-    // 4. Metrics row — active/review cards with non-zero metrics
-    const hasMetrics = card.cost_usd > 0 || card.input_tokens > 0 || card.output_tokens > 0 || card.context_pct > 0;
-
-    if (['active', 'review'].includes(card.column_name) && hasMetrics) {
-        const pct = Math.min((card.context_pct || 0) * 100, 100);
+    if (card.cost_usd > 0) {
+        statusParts.push(`<span>$${card.cost_usd.toFixed(2)}</span>`);
+    }
+    const pct = Math.min((card.context_pct || 0) * 100, 100);
+    if (pct > 0) {
         const contextClass = pct >= 80 ? 'context-danger' : pct >= 60 ? 'context-warning' : '';
-
-        html += `<div class="card-metrics">
-            <span class="metric">$${(card.cost_usd || 0).toFixed(2)}</span>
-            <span class="metric">${formatTokens(card.input_tokens || 0)}/${formatTokens(card.output_tokens || 0)}</span>
-            ${pct > 0 ? `<span class="metric ${contextClass}">${pct.toFixed(0)}%</span>` : ''}
-        </div>`;
-
-        // 5. Context gauge — thin 2px bar
-        if (pct > 0) {
-            const gaugeClass = pct >= 80 ? 'gauge-danger' : pct >= 60 ? 'gauge-warning' : '';
-            html += `<div class="context-gauge">
-                <div class="context-gauge-bar">
-                    <div class="context-gauge-fill ${gaugeClass}" style="width: ${pct}%"></div>
-                </div>
-            </div>`;
-        }
+        statusParts.push(`<span class="${contextClass}">${pct.toFixed(0)}%</span>`);
+    }
+    if (statusParts.length > 0) {
+        html += `<div class="card-status-bar">${statusParts.join('<span class="card-status-sep">\u00b7</span>')}</div>`;
     }
 
-    // Done card metrics
-    if (card.column_name === 'done' && hasMetrics) {
-        html += `<div class="card-metrics card-metrics-final">
-            <span class="metric">$${(card.cost_usd || 0).toFixed(2)}</span>
-            <span class="metric">${formatTokens((card.input_tokens || 0) + (card.output_tokens || 0))} tok</span>
+    // Context gauge — thin 2px bar at very bottom
+    if (pct > 0) {
+        const gaugeClass = pct >= 80 ? 'gauge-danger' : pct >= 60 ? 'gauge-warning' : '';
+        html += `<div class="context-gauge">
+            <div class="context-gauge-bar">
+                <div class="context-gauge-fill ${gaugeClass}" style="width: ${pct}%"></div>
+            </div>
         </div>`;
     }
-
-    // 6. Quick actions — visible on hover
-    const hasTerminal = card.tmux_session || card.is_external;
-    html += `<div class="card-quick-actions">
-        <button class="quick-action-btn" data-action="archive" title="Archive"><i data-lucide="archive"></i></button>
-        <button class="quick-action-btn" data-action="move-next" title="Move to next column"><i data-lucide="arrow-right"></i></button>
-        ${hasTerminal ? `<button class="quick-action-btn" data-action="open-terminal" title="Open terminal"><i data-lucide="terminal"></i></button>` : ''}
-    </div>`;
 
     el.innerHTML = html;
 
-    // Render Lucide icons within this card
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons({ root: el });
-    }
-
-    // Quick action handlers
-    el.querySelectorAll('.quick-action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleQuickAction(btn.dataset.action, card);
-        });
-    });
-
     // Card click handler — open terminal for session cards
+    const hasTerminal = card.tmux_session || card.is_external;
     if (hasTerminal) {
         el.addEventListener('click', (e) => {
             if (e.defaultPrevented) return;
@@ -100,7 +63,70 @@ export function createCardElement(card) {
         });
     }
 
+    // Right-click context menu
+    el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showCardContextMenu(e, card);
+    });
+
     return el;
+}
+
+function showCardContextMenu(e, card) {
+    // Remove any existing context menu
+    dismissContextMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'card-context-menu';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+
+    const hasTerminal = card.tmux_session || card.is_external;
+
+    const items = [
+        { label: 'Move to next column', action: 'move-next' },
+        ...(hasTerminal ? [{ label: 'Open terminal', action: 'open-terminal' }] : []),
+        { label: 'Archive', action: 'archive' },
+    ];
+
+    items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'card-context-menu-item';
+        el.textContent = item.label;
+        el.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            dismissContextMenu();
+            handleQuickAction(item.action, card);
+        });
+        menu.appendChild(el);
+    });
+
+    document.body.appendChild(menu);
+
+    // Reposition if overflowing viewport
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+        menu.style.left = `${window.innerWidth - rect.width - 4}px`;
+    }
+    if (rect.bottom > window.innerHeight) {
+        menu.style.top = `${window.innerHeight - rect.height - 4}px`;
+    }
+
+    // Dismiss on click outside or Escape
+    setTimeout(() => {
+        document.addEventListener('click', dismissContextMenu, { once: true });
+        document.addEventListener('keydown', onEscDismiss);
+    }, 0);
+}
+
+function onEscDismiss(e) {
+    if (e.key === 'Escape') dismissContextMenu();
+}
+
+function dismissContextMenu() {
+    const existing = document.querySelector('.card-context-menu');
+    if (existing) existing.remove();
+    document.removeEventListener('keydown', onEscDismiss);
 }
 
 async function handleQuickAction(action, card) {
@@ -135,14 +161,20 @@ async function handleQuickAction(action, card) {
     }
 }
 
+function timeAgo(isoString) {
+    if (!isoString) return '';
+    const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+    if (seconds < 60) return 'now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
-}
-
-function formatTokens(n) {
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
-    return n.toString();
 }
