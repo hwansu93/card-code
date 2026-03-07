@@ -31,7 +31,7 @@
             <h1 class="logo">
                 <img src="/img/cardcode-icon.svg" alt="CardCode" class="logo-icon">
                 CardCode
-                <span id="connection-status" class="connection-dot disconnected" title="Disconnected"></span>
+                <span id="connection-status" class="connection-dot disconnected" title="Disconnected" role="status" aria-live="polite" aria-label="Connection status: disconnected"></span>
             </h1>
             <select id="project-filter" class="filter-select">
                 <option value="">All Projects</option>
@@ -56,7 +56,7 @@
     </header>
 
     <div class="app-layout">
-        <main class="board" id="board">
+        <main class="board" id="board" role="main" aria-label="Kanban board">
             <!-- Columns are rendered dynamically by board.js -->
 
             <!-- Empty State / Onboarding Overlay -->
@@ -88,7 +88,7 @@
             </div>
         </main>
 
-        <aside class="terminal-panel" id="terminal-panel">
+        <aside class="terminal-panel" id="terminal-panel" role="complementary" aria-label="Terminal output">
             <div id="terminal-resize-handle" class="terminal-resize-handle"></div>
             <div class="terminal-panel-header" id="terminal-panel-header">
                 <div class="terminal-header-info">
@@ -120,7 +120,7 @@
     </div>
 
     <!-- Settings Drawer -->
-    <aside class="drawer drawer-right" id="settings-drawer">
+    <aside class="drawer drawer-right" id="settings-drawer" role="dialog" aria-label="Settings">
         <div class="drawer-header">
             <h3><i data-lucide="settings"></i> Settings</h3>
             <button class="btn btn-icon drawer-close" id="settings-close"><i data-lucide="x"></i></button>
@@ -228,7 +228,7 @@
     </aside>
 
     <!-- Archive Drawer -->
-    <aside class="drawer drawer-right" id="archive-drawer">
+    <aside class="drawer drawer-right" id="archive-drawer" role="dialog" aria-label="Archive">
         <div class="drawer-header">
             <h3><i data-lucide="archive"></i> Archive</h3>
             <div class="drawer-search">
@@ -293,7 +293,7 @@
     </dialog>
 
     <!-- Toast Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" role="alert" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>

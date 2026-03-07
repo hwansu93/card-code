@@ -53,6 +53,19 @@ a:hover {
     font-family: 'JetBrains Mono', 'SF Mono', monospace;
 }
 
+/* --- Z-index Scale (theme-independent) --- */
+
+:root {
+    --z-base: 1;
+    --z-sticky: 10;
+    --z-dropdown: 100;
+    --z-drawer: 200;
+    --z-overlay: 250;
+    --z-modal: 300;
+    --z-toast: 400;
+    --z-tooltip: 500;
+}
+
 /* --- Custom Properties: Dark Theme (default) --- */
 
 :root,
@@ -106,6 +119,12 @@ a:hover {
     /* Transition */
     --transition: 150ms ease-out;
 
+    /* Terminal */
+    --terminal-bg: #0f1014;
+    --terminal-fg: #e8e6e3;
+    --terminal-cursor: #e5853d;
+    --terminal-selection: rgba(229, 133, 61, 0.3);
+
     color-scheme: dark;
 }
 
@@ -143,6 +162,12 @@ a:hover {
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
     --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+
+    /* Terminal */
+    --terminal-bg: #1e1e2e;
+    --terminal-fg: #cdd6f4;
+    --terminal-cursor: #d4742e;
+    --terminal-selection: rgba(212, 116, 46, 0.3);
 
     color-scheme: light;
 }
@@ -187,7 +212,7 @@ a:hover {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 100;
+    z-index: var(--z-dropdown);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -321,7 +346,8 @@ a:hover {
 }
 
 .btn-small {
-    height: 24px;
+    min-height: 32px;
+    min-width: 32px;
     padding: 0 8px;
     font-size: 11px;
 }
@@ -491,7 +517,7 @@ a:hover {
     position: absolute;
     top: 100%;
     right: 0;
-    z-index: 100;
+    z-index: var(--z-dropdown);
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -738,7 +764,7 @@ a:hover {
 
 .card-context-menu {
     position: fixed;
-    z-index: 9999;
+    z-index: var(--z-dropdown);
     min-width: 160px;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -953,7 +979,7 @@ dialog textarea {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    z-index: var(--z-sticky);
     pointer-events: none;
 }
 
@@ -1054,7 +1080,7 @@ dialog textarea {
     width: 380px;
     background: var(--bg-primary);
     border-left: 1px solid var(--border);
-    z-index: 100;
+    z-index: var(--z-drawer);
     display: flex;
     flex-direction: column;
     transition: transform 200ms ease-out;
@@ -1123,7 +1149,7 @@ dialog textarea {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.3);
-    z-index: 99;
+    z-index: var(--z-overlay);
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms ease-out;
@@ -1401,7 +1427,7 @@ dialog textarea {
     bottom: 0;
     width: 4px;
     cursor: col-resize;
-    z-index: 10;
+    z-index: var(--z-sticky);
     transition: background var(--transition);
 }
 
@@ -1473,7 +1499,7 @@ dialog textarea {
 .terminal-output {
     flex: 1;
     overflow: auto;
-    background: #0c0c0c;
+    background: var(--terminal-bg);
     margin: 0;
     padding: 0;
 }
@@ -1484,7 +1510,7 @@ dialog textarea {
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 1.5;
-    color: #e0e0e0;
+    color: var(--terminal-fg);
     white-space: pre-wrap;
     word-wrap: break-word;
     min-height: 100%;
@@ -1527,7 +1553,7 @@ dialog textarea {
     align-items: center;
     justify-content: center;
     background: var(--bg-primary);
-    z-index: 1;
+    z-index: var(--z-base);
 }
 
 .terminal-panel-empty.hidden {
@@ -1550,26 +1576,13 @@ dialog textarea {
     font-size: 13px;
 }
 
-/* Light mode terminal stays dark */
-[data-theme="light"] .terminal-output {
-    background: #1a1a1e;
-}
-
-[data-theme="light"] .terminal-output pre {
-    color: #d0d0d0;
-}
-
-[data-theme="light"] .terminal-panel-empty {
-    background: var(--bg-primary);
-}
-
 /* --- Toast Container --- */
 
 .toast-container {
     position: fixed;
     bottom: 16px;
     right: 16px;
-    z-index: 200;
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1681,7 +1694,7 @@ dialog textarea {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 150;
+    z-index: var(--z-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1765,7 +1778,7 @@ dialog textarea {
         right: 0;
         height: 50vh;
         width: 100%;
-        z-index: 100;
+        z-index: var(--z-dropdown);
         border-top: 1px solid var(--border);
         border-left: none;
     }
