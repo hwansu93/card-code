@@ -1,6 +1,6 @@
 import { state, apiPost, apiPatch } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, showConfirmDialog } from './utils.js';
 import { showToast } from './notifications.js';
 
 export function setupDialogs() {
@@ -512,7 +512,7 @@ function setupTerminalViewer() {
         }
 
         currentCardId = cardId;
-        window.__selectedCardId = cardId;
+        state.selectedCardId = cardId;
         titleEl.textContent = cardTitle || 'Session';
 
         // Highlight selected card

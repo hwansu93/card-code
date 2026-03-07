@@ -21,6 +21,9 @@ export function renderBoard(cards) {
     const board = document.getElementById('board');
     if (!board) return;
 
+    // Track existing card IDs so we only animate genuinely new cards
+    const existingCardIds = new Set([...document.querySelectorAll('.card')].map(c => c.dataset.cardId));
+
     // Preserve the empty-state element
     const emptyState = document.getElementById('empty-state');
 
@@ -112,7 +115,11 @@ export function renderBoard(cards) {
             body.appendChild(placeholder);
         } else {
             colCards.forEach(card => {
-                body.appendChild(createCardElement(card));
+                const cardEl = createCardElement(card);
+                if (!existingCardIds.has(card.id)) {
+                    cardEl.classList.add('card-entrance');
+                }
+                body.appendChild(cardEl);
             });
         }
 
@@ -190,6 +197,19 @@ function showColumnMenu(col, anchorEl, cardCount) {
     const menu = document.createElement('div');
     menu.className = 'column-context-menu';
     menu.setAttribute('role', 'menu');
+
+    // Rename option
+    const renameItem = document.createElement('button');
+    renameItem.className = 'column-menu-item';
+    renameItem.setAttribute('role', 'menuitem');
+    renameItem.innerHTML = '<i data-lucide="pencil"></i> Rename column';
+    renameItem.addEventListener('click', () => {
+        menu.remove();
+        const headerEl = anchorEl.closest('.column-header');
+        const nameEl = headerEl?.querySelector('h2');
+        if (nameEl) startRename(col, nameEl);
+    });
+    menu.appendChild(renameItem);
 
     const deleteItem = document.createElement('button');
     deleteItem.className = 'column-menu-item column-menu-item-danger';
@@ -420,7 +440,9 @@ export function addCardToBoard(cardData) {
         // Remove empty placeholder if present
         const placeholder = container.querySelector('.column-empty');
         if (placeholder) placeholder.remove();
-        container.appendChild(createCardElement(cardData));
+        const cardEl = createCardElement(cardData);
+        cardEl.classList.add('card-entrance');
+        container.appendChild(cardEl);
         updateColumnCounts();
         updateEmptyState();
         if (typeof lucide !== 'undefined') lucide.createIcons();

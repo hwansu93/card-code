@@ -653,6 +653,9 @@ a:hover {
     padding: 10px 12px;
     cursor: grab;
     transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out, background 150ms ease-out;
+}
+
+.card.card-entrance {
     animation: cardEntrance 200ms ease-out;
 }
 
@@ -760,6 +763,46 @@ a:hover {
 .card-status-bar .context-warning { color: var(--warning); }
 .card-status-bar .context-danger { color: var(--danger); }
 
+/* --- Card Overflow Button (hover-visible) --- */
+
+.card {
+    position: relative;
+}
+
+.card-overflow-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition), color var(--transition), background var(--transition);
+}
+
+.card:hover .card-overflow-btn {
+    opacity: 1;
+}
+
+.card-overflow-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.card-overflow-btn svg,
+.card-overflow-btn i {
+    width: 14px;
+    height: 14px;
+}
+
 /* --- Card Context Menu --- */
 
 .card-context-menu {
@@ -787,7 +830,7 @@ a:hover {
 
 /* Done card muted styles */
 .card.card-done {
-    opacity: 0.55;
+    opacity: 0.65;
 }
 
 .card.card-done .card-title {
@@ -1036,6 +1079,16 @@ dialog textarea {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
     border-color: var(--border-hover);
+}
+
+.onboarding-card-info {
+    cursor: default;
+    opacity: 0.8;
+}
+
+.onboarding-card-info:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .onboarding-card svg,
@@ -1727,6 +1780,71 @@ dialog textarea {
 
 .hint-dismiss:hover {
     color: var(--accent);
+}
+
+/* --- Terminal Panel Collapsed --- */
+
+.terminal-panel.collapsed {
+    display: none;
+}
+
+/* --- Board Loading / Error States --- */
+
+.board-loading, .board-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.board-error h2 {
+    color: var(--text-primary);
+    font-size: 18px;
+}
+
+.board-error p {
+    font-size: 14px;
+}
+
+/* --- Confirm Dialog --- */
+
+.confirm-dialog p {
+    color: var(--text-secondary);
+    margin: 8px 0 16px;
+    font-size: 14px;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+/* --- Terminal Search Input --- */
+
+.terminal-search-input {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    outline: none;
+    width: 140px;
+    transition: border-color var(--transition);
+}
+
+.terminal-search-input:focus {
+    border-color: var(--accent);
 }
 
 /* --- Responsive --- */

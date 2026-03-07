@@ -10,7 +10,7 @@ export function createCardElement(card) {
     el.dataset.position = card.position;
     el.setAttribute('role', 'article');
     el.setAttribute('aria-label', card.title);
-    if (card.id === window.__selectedCardId) el.classList.add('selected');
+    if (card.id === state.selectedCardId) el.classList.add('selected');
     if (card.session_status) el.classList.add(`card-status-${card.session_status}`);
     if (card.column_name === 'done') el.classList.add('card-done');
 
@@ -73,6 +73,18 @@ export function createCardElement(card) {
         showCardContextMenu(e, card);
     });
 
+    // Overflow button for discoverability (visible on hover)
+    const overflowBtn = document.createElement('button');
+    overflowBtn.className = 'card-overflow-btn';
+    overflowBtn.setAttribute('aria-label', 'Card actions');
+    overflowBtn.innerHTML = '<i data-lucide="more-horizontal"></i>';
+    overflowBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showCardContextMenu(e, card);
+    });
+    el.appendChild(overflowBtn);
+
     return el;
 }
 
@@ -89,6 +101,7 @@ function showCardContextMenu(e, card) {
     const hasTerminal = card.tmux_session || card.is_external;
 
     const items = [
+        { label: 'Edit card', action: 'edit' },
         { label: 'Move to next column', action: 'move-next' },
         ...(hasTerminal ? [{ label: 'Open terminal', action: 'open-terminal' }] : []),
         { label: 'Archive', action: 'archive' },
@@ -137,7 +150,10 @@ function dismissContextMenu() {
 
 async function handleQuickAction(action, card) {
     try {
-        if (action === 'archive') {
+        if (action === 'edit') {
+            window.__openCardDialog?.(card.id);
+            return;
+        } else if (action === 'archive') {
             await apiPatch(`/cards/${card.id}/move`, {
                 column_name: 'archive',
                 position: Date.now(),
