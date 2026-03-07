@@ -454,6 +454,150 @@ a:hover {
     display: none;
 }
 
+/* Column header icon buttons */
+.btn-icon-sm {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color var(--transition), background var(--transition);
+}
+.btn-icon-sm:hover {
+    color: var(--text);
+    background: var(--bg-secondary);
+}
+.btn-icon-sm i,
+.btn-icon-sm svg {
+    width: 14px;
+    height: 14px;
+}
+
+.collapse-toggle {
+    flex-shrink: 0;
+}
+
+.column.collapsed .column-actions-btn,
+.column.collapsed .collapse-toggle i[data-lucide="chevron-left"] {
+    display: none;
+}
+
+/* Column actions context menu */
+.column-context-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 160px;
+    padding: 4px;
+}
+.column-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    border-radius: 4px;
+    transition: background var(--transition);
+}
+.column-menu-item:hover {
+    background: var(--bg-secondary);
+}
+.column-menu-item i,
+.column-menu-item svg {
+    width: 14px;
+    height: 14px;
+}
+.column-menu-item-danger {
+    color: var(--danger, #ef4444);
+}
+.column-menu-item-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Column header needs relative positioning for context menu */
+.column-header {
+    position: relative;
+}
+
+/* Column rename inline input */
+.column-rename-input {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-secondary);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 2px 6px;
+    flex: 1;
+    min-width: 0;
+    outline: none;
+}
+
+/* Add column button */
+.add-column-btn {
+    flex-shrink: 0;
+    width: 40px;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 2px dashed var(--border-subtle);
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+.add-column-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-subtle, rgba(59,130,246,0.05));
+}
+.add-column-btn i,
+.add-column-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Add column inline form */
+.add-column-form {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 12px;
+}
+.add-column-input {
+    font-size: 13px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 8px 12px;
+    width: 200px;
+    outline: none;
+}
+
+/* Column ghost state during reorder */
+.column-ghost {
+    opacity: 0.4;
+}
+
 /* Column empty placeholder */
 .column-empty {
     padding: 24px 16px;

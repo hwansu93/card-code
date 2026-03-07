@@ -3,6 +3,7 @@ import { renderBoard, setupSortable, updateColumnCounts, updateEmptyState } from
 // State
 export const state = {
     cards: [],
+    columns: [],
     projects: [],
     selectedCardId: null,
 };
@@ -45,7 +46,8 @@ export async function apiDelete(path) {
 
 // Initialize
 async function init() {
-    // Load initial data
+    // Load initial data — columns first so renderBoard can use them
+    state.columns = await apiGet('/columns');
     state.cards = await apiGet('/cards');
     state.projects = await apiGet('/projects');
 
