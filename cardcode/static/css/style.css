@@ -759,28 +759,6 @@ a:hover {
     background: var(--bg-tertiary);
 }
 
-.card-prompt-input {
-    width: 100%;
-    margin-top: 8px;
-}
-
-.card-prompt-input input {
-    width: 100%;
-    padding: 6px 8px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    transition: border-color var(--transition);
-}
-
-.card-prompt-input input:focus {
-    border-color: var(--accent);
-    outline: none;
-}
-
 /* Done card muted styles */
 .card.card-done {
     opacity: 0.55;
@@ -792,59 +770,6 @@ a:hover {
 
 .card.card-done .card-status-bar {
     color: var(--text-muted);
-}
-
-/* --- Status Badges --- */
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-size: 10px;
-    font-weight: 600;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.status-badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-}
-
-.status-badge.status-alive {
-    background: rgba(74, 222, 128, 0.12);
-    color: var(--status-alive);
-}
-.status-badge.status-alive .status-badge-dot {
-    background: var(--status-alive);
-}
-
-.status-badge.status-idle {
-    background: rgba(96, 165, 250, 0.12);
-    color: var(--status-idle);
-}
-.status-badge.status-idle .status-badge-dot {
-    background: var(--status-idle);
-}
-
-.status-badge.status-waiting {
-    background: rgba(251, 191, 36, 0.12);
-    color: var(--status-waiting);
-}
-.status-badge.status-waiting .status-badge-dot {
-    background: var(--status-waiting);
-}
-
-.status-badge.status-dead {
-    background: rgba(107, 114, 128, 0.12);
-    color: var(--status-dead);
-}
-.status-badge.status-dead .status-badge-dot {
-    background: var(--status-dead);
 }
 
 /* --- Context Gauge --- */
@@ -878,28 +803,6 @@ a:hover {
 
 .context-gauge-fill.gauge-danger {
     background: var(--danger);
-}
-
-.context-gauge-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-/* --- Provider Badge --- */
-
-.provider-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 6px;
-    border-radius: 99px;
-    font-size: 9px;
-    font-family: var(--font-mono);
-    background: var(--bg-tertiary);
-    color: var(--text-muted);
-    border: 1px solid var(--border-subtle);
 }
 
 /* --- Dialogs --- */
@@ -1085,34 +988,6 @@ dialog textarea {
     margin-bottom: 24px;
 }
 
-.empty-state-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 24px;
-    text-align: left;
-}
-
-.step {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.step-key {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    padding: 4px 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 500;
-}
-
 /* Onboarding action cards */
 .onboarding-actions {
     display: flex;
@@ -1168,23 +1043,6 @@ dialog textarea {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Skeleton loading shimmer */
-@keyframes shimmer {
-    0% {
-        background-position: -200px 0;
-    }
-    100% {
-        background-position: calc(200px + 100%) 0;
-    }
-}
-
-.skeleton {
-    background: linear-gradient(90deg, var(--bg-tertiary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
-    background-size: 200px 100%;
-    animation: shimmer 1.5s ease-out infinite;
-    border-radius: var(--radius-sm);
 }
 
 /* --- Drawer --- */
