@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from cardcode.card_reconciler import find_unmatched_sessions
+from cardcode.card_reconciler import find_unmatched_external, find_unmatched_sessions
 from cardcode.config import CardCodeConfig
 from cardcode.database import get_db
 from cardcode.models import generate_ksuid
@@ -163,7 +163,7 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
                     except Exception:
                         await mark_failed(db, prompt["id"])
 
-        # Auto-discover unmatched sessions
+        # Auto-discover unmatched tmux sessions
         all_cards_cursor = await db.execute("SELECT * FROM cards")
         all_cards = [dict(row) for row in await all_cards_cursor.fetchall()]
         unmatched = find_unmatched_sessions(sessions, all_cards)
@@ -176,6 +176,21 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
                    session_status, created_at, updated_at)
                    VALUES (?, ?, 'active', 0, ?, 'alive', ?, ?)""",
                 (card_id, f"Auto: {session['name']}", session["name"], now, now),
+            )
+
+        # Auto-discover external (non-tmux) Claude processes
+        externals = tmux.list_external_claude_processes()
+        unmatched_ext = find_unmatched_external(externals, all_cards)
+
+        for ext in unmatched_ext:
+            now = datetime.now(timezone.utc).isoformat()
+            card_id = generate_ksuid()
+            title = f"External: {ext.get('cwd', '').split('/')[-1] or 'claude'}"
+            await db.execute(
+                """INSERT INTO cards (id, title, column_name, position, session_id,
+                   project_path, session_status, is_external, created_at, updated_at)
+                   VALUES (?, ?, 'active', 0, ?, ?, 'alive', 1, ?, ?)""",
+                (card_id, title, str(ext["pid"]), ext.get("cwd"), now, now),
             )
 
         await db.commit()

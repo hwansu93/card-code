@@ -81,6 +81,7 @@ class Card(BaseModel):
     handoff_notes: str | None = None
     manual_overrides: str = "{}"
     is_launching: int = 0
+    is_external: int = 0
     created_at: str
     started_at: str | None = None
     completed_at: str | None = None

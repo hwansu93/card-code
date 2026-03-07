@@ -271,6 +271,14 @@ async def get_terminal_output(request: Request, card_id: str) -> dict:
         row = await _get_card_or_404(db, card_id)
         card = Card(**row)
 
+        if card.is_external:
+            return {
+                "output": "Terminal view not available for external sessions",
+                "session": None,
+                "alive": False,
+                "is_external": True,
+            }
+
         if not card.tmux_session:
             return {"output": "", "session": None, "alive": False}
 

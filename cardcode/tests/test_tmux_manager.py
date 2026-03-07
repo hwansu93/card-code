@@ -15,19 +15,32 @@ def test_session_name_format(tmux):
 
 
 @patch("cardcode.tmux_manager.subprocess.run")
-def test_list_sessions_parses_output(mock_run, tmux):
+def test_list_sessions_finds_claude_panes(mock_run, tmux):
     mock_run.return_value = MagicMock(
         returncode=0,
-        stdout="cc-proj-abc123: 1 windows (created Mon Mar  6 12:00:00 2026)\n",
+        stdout="cc-proj-abc123 claude\nbonsai_forge claude\nother-session bash\n",
     )
     sessions = tmux.list_sessions()
-    assert len(sessions) == 1
-    assert sessions[0]["name"] == "cc-proj-abc123"
+    names = [s["name"] for s in sessions]
+    assert len(sessions) == 2
+    assert "cc-proj-abc123" in names
+    assert "bonsai_forge" in names
+    assert "other-session" not in names
 
 
 @patch("cardcode.tmux_manager.subprocess.run")
 def test_list_sessions_empty_when_no_server(mock_run, tmux):
     mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="no server running")
+    sessions = tmux.list_sessions()
+    assert sessions == []
+
+
+@patch("cardcode.tmux_manager.subprocess.run")
+def test_list_sessions_no_claude_sessions(mock_run, tmux):
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout="mysession bash\nother vim\n",
+    )
     sessions = tmux.list_sessions()
     assert sessions == []
 

@@ -22,19 +22,79 @@ class TmuxManager:
         return f"{self.prefix}{safe_name}-{suffix}"
 
     def list_sessions(self) -> list[dict]:
+        """List all tmux sessions that have a claude process in any pane."""
         result = subprocess.run(
-            self._cmd("list-sessions"),
+            self._cmd("list-panes", "-a", "-F", "#{session_name} #{pane_current_command}"),
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
             return []
-        sessions = []
+        claude_sessions: dict[str, bool] = {}
         for line in result.stdout.strip().splitlines():
-            name = line.split(":")[0].strip()
-            if name.startswith(self.prefix):
-                sessions.append({"name": name, "raw": line})
-        return sessions
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                session_name, command = parts
+                if "claude" in command.lower():
+                    claude_sessions[session_name] = True
+        return [{"name": name} for name in claude_sessions]
+
+    def list_external_claude_processes(self) -> list[dict]:
+        """Find Claude Code processes not running in any tmux session."""
+        # Get PIDs of all processes inside tmux panes
+        tmux_result = subprocess.run(
+            self._cmd("list-panes", "-a", "-F", "#{pane_pid}"),
+            capture_output=True,
+            text=True,
+        )
+        tmux_pids: set[int] = set()
+        if tmux_result.returncode == 0:
+            for line in tmux_result.stdout.strip().splitlines():
+                line = line.strip()
+                if line.isdigit():
+                    tmux_pids.add(int(line))
+                    # Also collect all descendant PIDs of tmux panes
+                    children = subprocess.run(
+                        ["pgrep", "-P", line],
+                        capture_output=True, text=True,
+                    )
+                    if children.returncode == 0:
+                        for child in children.stdout.strip().splitlines():
+                            if child.strip().isdigit():
+                                tmux_pids.add(int(child.strip()))
+
+        # Find all claude processes
+        pgrep_result = subprocess.run(
+            ["pgrep", "-a", "claude"],
+            capture_output=True,
+            text=True,
+        )
+        if pgrep_result.returncode != 0:
+            return []
+
+        external: list[dict] = []
+        for line in pgrep_result.stdout.strip().splitlines():
+            parts = line.split(None, 1)
+            if len(parts) < 2:
+                continue
+            pid_str, command = parts
+            if not pid_str.isdigit():
+                continue
+            pid = int(pid_str)
+            if pid in tmux_pids:
+                continue
+
+            # Try to get cwd from /proc
+            cwd = None
+            try:
+                import os
+                cwd = os.readlink(f"/proc/{pid}/cwd")
+            except OSError:
+                pass
+
+            external.append({"pid": pid, "command": command, "cwd": cwd})
+
+        return external
 
     def spawn_session(
         self,

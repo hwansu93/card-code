@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS cards (
     handoff_notes TEXT,
     manual_overrides TEXT DEFAULT '{}',
     is_launching INTEGER DEFAULT 0,
+    is_external INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
     started_at TEXT,
     completed_at TEXT,

@@ -16,3 +16,15 @@ def find_unmatched_sessions(sessions: list[dict], cards: list[dict]) -> list[dic
     """Find tmux sessions that don't match any existing card."""
     matched_names = {card["tmux_session"] for card in cards if card.get("tmux_session")}
     return [s for s in sessions if s["name"] not in matched_names]
+
+
+def find_unmatched_external(externals: list[dict], cards: list[dict]) -> list[dict]:
+    """Find external Claude processes that don't match any existing card."""
+    matched_pids = set()
+    for card in cards:
+        if card.get("is_external") and card.get("session_id"):
+            try:
+                matched_pids.add(int(card["session_id"]))
+            except (ValueError, TypeError):
+                pass
+    return [e for e in externals if e["pid"] not in matched_pids]
