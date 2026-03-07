@@ -1,5 +1,5 @@
-import { state } from './app.js';
-import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, updateColumnCounts } from './board.js';
+import { state, apiGet } from './app.js';
+import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, updateColumnCounts, setupSortable } from './board.js';
 
 export function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -9,12 +9,21 @@ export function connectWebSocket() {
     let reconnectDelay = 1000;
     const maxDelay = 30000;
 
+    const statusDot = document.getElementById('connection-status');
+
+    function setStatus(status) {
+        if (!statusDot) return;
+        statusDot.className = `connection-dot ${status}`;
+    }
+
     function connect() {
+        setStatus('reconnecting');
         ws = new WebSocket(url);
 
         ws.onopen = () => {
             console.log('WebSocket connected');
-            reconnectDelay = 1000; // reset on successful connect
+            reconnectDelay = 1000;
+            setStatus('connected');
         };
 
         ws.onmessage = (event) => {
@@ -23,6 +32,7 @@ export function connectWebSocket() {
         };
 
         ws.onclose = () => {
+            setStatus('disconnected');
             console.log(`WebSocket closed, reconnecting in ${reconnectDelay}ms`);
             setTimeout(() => {
                 reconnectDelay = Math.min(reconnectDelay * 2, maxDelay);
@@ -36,7 +46,7 @@ export function connectWebSocket() {
         };
     }
 
-    function handleMessage(msg) {
+    async function handleMessage(msg) {
         switch (msg.type) {
             case 'card_created':
                 addCardToBoard(msg.card);
@@ -85,6 +95,16 @@ export function connectWebSocket() {
                 window.dispatchEvent(new CustomEvent('cardcode:status', { detail: msg }));
                 break;
             }
+
+            case 'column_created':
+            case 'column_updated':
+            case 'column_deleted':
+                state.columns = await apiGet('/columns');
+                state.cards = await apiGet('/cards');
+                renderBoard(state.cards);
+                updateColumnCounts();
+                setupSortable();
+                break;
 
             case 'projects_refreshed':
                 state.projects = msg.projects;
