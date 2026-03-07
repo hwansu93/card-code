@@ -1900,6 +1900,19 @@ dialog textarea {
     .drawer {
         width: 100%;
     }
+
+    .terminal-panel.mobile-open {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50vh;
+        width: 100%;
+        z-index: 100;
+        border-top: 1px solid var(--border);
+        border-left: none;
+    }
 }
 
 /* --- Reduced Motion --- */

@@ -50,9 +50,10 @@ async def list_cards(request: Request, project: str | None = None) -> list[Card]
 async def create_card(request: Request, body: CardCreate) -> Card:
     db = await get_db(request.app.state.config.db_path)
     try:
-        col = await get_column_by_name(db, body.column_name)
-        if not col:
-            raise HTTPException(status_code=400, detail=f"Column '{body.column_name}' does not exist")
+        if body.column_name != "archive":
+            col = await get_column_by_name(db, body.column_name)
+            if not col:
+                raise HTTPException(status_code=400, detail=f"Column '{body.column_name}' does not exist")
 
         now = _now()
         card_id = generate_ksuid()
@@ -124,9 +125,10 @@ async def move_card(request: Request, card_id: str, body: CardMove) -> Card:
     try:
         await _get_card_or_404(db, card_id)
 
-        col = await get_column_by_name(db, body.column_name)
-        if not col:
-            raise HTTPException(status_code=400, detail=f"Column '{body.column_name}' does not exist")
+        if body.column_name != "archive":
+            col = await get_column_by_name(db, body.column_name)
+            if not col:
+                raise HTTPException(status_code=400, detail=f"Column '{body.column_name}' does not exist")
 
         now = _now()
 

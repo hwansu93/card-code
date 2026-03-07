@@ -69,6 +69,10 @@ export function setupKeyboard() {
                     moveCardToColumn(-1);
                 }
                 break;
+            case 's':
+                e.preventDefault();
+                document.getElementById('settings-btn')?.click();
+                break;
             case '/':
                 e.preventDefault();
                 document.getElementById('project-filter').focus();

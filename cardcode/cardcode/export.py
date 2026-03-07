@@ -17,6 +17,16 @@ async def export_board(db_path: Path) -> dict:
     return {"cards": cards, "columns": columns, "queued_prompts": prompts}
 
 
+ALLOWED_CARD_COLS = {
+    "id", "title", "description", "column_name", "position", "project",
+    "project_path", "provider", "session_id", "tmux_session", "jsonl_path",
+    "session_status", "cost_usd", "input_tokens", "output_tokens",
+    "context_pct", "initial_prompt", "handoff_notes", "manual_overrides",
+    "is_launching", "is_external", "created_at", "started_at",
+    "completed_at", "updated_at",
+}
+
+
 async def import_board(db_path: Path, data: dict) -> int:
     """Import cards, columns, and prompts from exported JSON. Returns count of imported cards."""
     async with aiosqlite.connect(db_path) as db:
@@ -32,6 +42,7 @@ async def import_board(db_path: Path, data: dict) -> int:
                 )
         count = 0
         for card in data.get("cards", []):
+            card = {k: v for k, v in card.items() if k in ALLOWED_CARD_COLS}
             cols = ", ".join(card.keys())
             placeholders = ", ".join("?" for _ in card)
             await db.execute(
