@@ -1,10 +1,9 @@
-import { state, apiPost, apiPatch, apiDelete } from './app.js';
-import { renderBoard, updateColumnCounts, updateEmptyState, addCardToBoard } from './board.js';
+import { state, apiPost, apiPatch } from './app.js';
+import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 
 export function setupDialogs() {
     setupCardDialog();
     setupSpawnDialog();
-    setupClearDone();
     setupArchiveDrawer();
     setupSettingsDrawer();
     setupTerminalViewer();
@@ -120,20 +119,6 @@ function setupSpawnDialog() {
     };
 }
 
-function setupClearDone() {
-    document.getElementById('clear-done').addEventListener('click', async () => {
-        const doneCards = state.cards.filter(c => c.column_name === 'done');
-        for (const card of doneCards) {
-            await apiPatch(`/cards/${card.id}/move`, { column_name: 'archive', position: 0 });
-        }
-        state.cards = state.cards.filter(c => c.column_name !== 'done');
-        renderBoard(state.cards);
-        updateColumnCounts();
-        updateEmptyState();
-        refreshArchiveCount();
-    });
-}
-
 // ── Archive Drawer ──────────────────────────────────────────────
 
 function setupArchiveDrawer() {
@@ -247,15 +232,6 @@ function setupArchiveDrawer() {
     }
 }
 
-async function refreshArchiveCount() {
-    const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
-    try {
-        const resp = await fetch(`${basePath}/api/cards/archived`);
-        const cards = await resp.json();
-        updateArchiveCount(cards.length);
-    } catch(e) {}
-}
-
 function updateArchiveCount(count) {
     const badge = document.getElementById('archive-count');
     if (!badge) return;
@@ -332,11 +308,62 @@ function setupSettingsDrawer() {
 
 // ── Terminal Panel (persistent right panel) ─────────────────────
 
+let term = null;
+let fitAddon = null;
+let searchAddon = null;
+
+function initXterm() {
+    const container = document.getElementById('terminal-xterm-container');
+    if (!container || term) return;
+
+    term = new Terminal({
+        cursorBlink: false,
+        cursorStyle: 'bar',
+        disableStdin: true,
+        fontSize: 13,
+        fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+        lineHeight: 1.4,
+        scrollback: 5000,
+        theme: {
+            background: '#0f1014',
+            foreground: '#e8e6e3',
+            cursor: '#e5853d',
+            selectionBackground: 'rgba(229, 133, 61, 0.3)',
+            black: '#1a1c24',
+            red: '#ef4444',
+            green: '#4ade80',
+            yellow: '#fbbf24',
+            blue: '#60a5fa',
+            magenta: '#c084fc',
+            cyan: '#22d3ee',
+            white: '#e8e6e3',
+            brightBlack: '#5c5955',
+            brightRed: '#f87171',
+            brightGreen: '#86efac',
+            brightYellow: '#fde68a',
+            brightBlue: '#93c5fd',
+            brightMagenta: '#d8b4fe',
+            brightCyan: '#67e8f9',
+            brightWhite: '#f5f5f4',
+        },
+    });
+
+    fitAddon = new FitAddon.FitAddon();
+    searchAddon = new SearchAddon.SearchAddon();
+
+    term.loadAddon(fitAddon);
+    term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    term.loadAddon(searchAddon);
+
+    term.open(container);
+    fitAddon.fit();
+}
+
 function setupTerminalViewer() {
+    const panel = document.getElementById('terminal-panel');
     const emptyState = document.getElementById('terminal-panel-empty');
     const refreshBtn = document.getElementById('terminal-refresh');
     const autoRefreshCheck = document.getElementById('terminal-auto-refresh');
-    const outputPre = document.getElementById('terminal-pre');
     const titleEl = document.getElementById('terminal-card-title');
     const sessionNameEl = document.getElementById('terminal-session-name');
     const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
@@ -379,19 +406,25 @@ function setupTerminalViewer() {
             const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`);
             const data = await resp.json();
 
-            outputPre.textContent = data.output || '(no output)';
+            if (!term) initXterm();
+
+            term.clear();
+            if (data.output) {
+                term.write(data.output.replace(/\n/g, '\r\n'));
+            } else {
+                term.write('(no output)');
+            }
             sessionNameEl.textContent = data.session || '';
 
-            // Auto-scroll to bottom
-            const container = outputPre.parentElement;
-            container.scrollTop = container.scrollHeight;
-
             if (!data.alive) {
-                outputPre.textContent += '\n\n--- Session ended ---';
+                term.write('\r\n\r\n--- Session ended ---');
                 stopAutoRefresh();
             }
         } catch (err) {
-            outputPre.textContent = 'Failed to load terminal output';
+            if (term) {
+                term.clear();
+                term.write('Failed to load terminal output');
+            }
         }
     }
 
@@ -423,6 +456,25 @@ function setupTerminalViewer() {
         }
     });
 
+    // Resize handle for terminal panel
+    setupResizeHandle();
+
+    // Ctrl+F search in terminal
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f' && term && panel.offsetWidth > 0) {
+            e.preventDefault();
+            const query = prompt('Search terminal:');
+            if (query && searchAddon) {
+                searchAddon.findNext(query);
+            }
+        }
+    });
+
+    // Refit terminal on window resize
+    window.addEventListener('resize', () => {
+        if (fitAddon && term) fitAddon.fit();
+    });
+
     // Expose globally for card click handler
     window.__openTerminalViewer = async (cardId, cardTitle) => {
         // Deselect previous card
@@ -434,14 +486,23 @@ function setupTerminalViewer() {
         currentCardId = cardId;
         window.__selectedCardId = cardId;
         titleEl.textContent = cardTitle || 'Session';
-        outputPre.textContent = 'Loading...';
 
         // Highlight selected card
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
         if (cardEl) cardEl.classList.add('selected');
 
+        // Mobile bottom sheet
+        if (window.innerWidth < 768) {
+            panel.classList.add('mobile-open');
+        }
+
         hideEmptyState();
         await loadTerminalOutput(cardId);
+
+        // Refit after panel becomes visible
+        if (fitAddon && term) {
+            requestAnimationFrame(() => fitAddon.fit());
+        }
 
         // Show/hide input based on whether it's an external session
         const card = (await import('./app.js')).state.cards.find(c => c.id === cardId);
@@ -454,6 +515,38 @@ function setupTerminalViewer() {
         if (autoRefreshCheck.checked) startAutoRefresh();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
+}
+
+function setupResizeHandle() {
+    const handle = document.getElementById('terminal-resize-handle');
+    const panel = document.getElementById('terminal-panel');
+    if (!handle || !panel) return;
+
+    let startX, startWidth;
+
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startWidth = panel.offsetWidth;
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    function onMouseMove(e) {
+        const delta = startX - e.clientX;
+        const newWidth = Math.max(280, Math.min(800, startWidth + delta));
+        panel.style.width = newWidth + 'px';
+        if (fitAddon) fitAddon.fit();
+    }
+
+    function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }
 }
 
 // ── Shared Drawer Helpers ───────────────────────────────────────
