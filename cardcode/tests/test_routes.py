@@ -274,3 +274,29 @@ async def test_stop_session(mock_tmux_cls, client):
     resp = await client.post(f"/api/cards/{card_id}/stop")
     assert resp.status_code == 200
     assert resp.json()["session_status"] == "dead"
+
+
+@pytest.mark.asyncio
+@patch("cardcode.routes.TmuxManager")
+async def test_terminal_output_preserves_ansi(mock_tmux_cls, client):
+    mock_tmux = MagicMock()
+    mock_tmux.spawn_session.return_value = "cc-proj-abc"
+    mock_tmux.is_session_alive.return_value = True
+    ansi_output = "\x1b[32mgreen text\x1b[0m \x1b[1;31mbold red\x1b[0m"
+    mock_tmux.capture_pane.return_value = ansi_output
+    mock_tmux_cls.return_value = mock_tmux
+
+    create = await client.post(
+        "/api/cards",
+        json={"title": "Task", "project_path": "/tmp/proj"},
+    )
+    card_id = create.json()["id"]
+    await client.post(f"/api/cards/{card_id}/spawn")
+
+    resp = await client.get(f"/api/cards/{card_id}/terminal")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["alive"] is True
+    assert "\x1b[32m" in data["output"]
+    assert "\x1b[1;31m" in data["output"]
+    assert data["output"] == ansi_output

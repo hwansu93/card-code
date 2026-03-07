@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 
 from sqlite3 import IntegrityError
@@ -8,8 +7,6 @@ from sqlite3 import IntegrityError
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from pydantic import BaseModel
-
-_ANSI_RE = re.compile(r'\x1b[\[\(][0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x0f|\x0e')
 
 from cardcode.database import get_db, get_columns, get_column_by_name, create_column, update_column
 from cardcode.export import export_board, import_board
@@ -292,7 +289,6 @@ async def get_terminal_output(request: Request, card_id: str) -> dict:
         tmux = TmuxManager(request.app.state.config.tmux_socket)
         alive = tmux.is_session_alive(card.tmux_session)
         output = tmux.capture_pane(card.tmux_session, lines=100) if alive else ""
-        output = _ANSI_RE.sub("", output)
 
         return {
             "output": output,
