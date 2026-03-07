@@ -1,9 +1,10 @@
-import { state } from './app.js';
-import { apiPatch } from './app.js';
-import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
+import { state, apiPatch, apiGet } from './app.js';
+import { renderBoard, updateColumnCounts } from './board.js';
 import { closeAllDrawers } from './dialogs.js';
 
-const COLUMNS = ['backlog', 'queue', 'active', 'review', 'done'];
+function getColumnNames() {
+    return (state.columns || []).map(c => c.name);
+}
 
 function isDrawerOpen() {
     return document.querySelector('.drawer.open') !== null;
@@ -120,10 +121,11 @@ function deselectAll() {
 }
 
 function moveSelection(dir) {
+    const columns = getColumnNames();
     const currentEl = document.querySelector('.card.selected');
     if (!currentEl) {
         // Select first card in first non-empty column
-        for (const col of COLUMNS) {
+        for (const col of columns) {
             const first = document.querySelector(`#col-${col} .card`);
             if (first) { selectCard(first.dataset.cardId); return; }
         }
@@ -139,15 +141,16 @@ function moveSelection(dir) {
 }
 
 function moveColumn(dir) {
+    const columns = getColumnNames();
     const currentEl = document.querySelector('.card.selected');
     if (!currentEl) return;
 
     const currentCol = currentEl.closest('.column').dataset.column;
-    const colIdx = COLUMNS.indexOf(currentCol);
+    const colIdx = columns.indexOf(currentCol);
     const newIdx = colIdx + dir;
-    if (newIdx < 0 || newIdx >= COLUMNS.length) return;
+    if (newIdx < 0 || newIdx >= columns.length) return;
 
-    const newCol = COLUMNS[newIdx];
+    const newCol = columns[newIdx];
     const firstInCol = document.querySelector(`#col-${newCol} .card`);
     if (firstInCol) {
         selectCard(firstInCol.dataset.cardId);
@@ -155,17 +158,17 @@ function moveColumn(dir) {
 }
 
 async function moveCardToColumn(dir) {
+    const columns = getColumnNames();
     const card = state.cards.find(c => c.id === state.selectedCardId);
     if (!card) return;
 
-    const colIdx = COLUMNS.indexOf(card.column_name);
+    const colIdx = columns.indexOf(card.column_name);
     const newIdx = colIdx + dir;
-    if (newIdx < 0 || newIdx >= COLUMNS.length) return;
+    if (newIdx < 0 || newIdx >= columns.length) return;
 
-    const newCol = COLUMNS[newIdx];
+    const newCol = columns[newIdx];
     try {
         await apiPatch(`/cards/${card.id}/move`, { column_name: newCol, position: Date.now() });
-        const { apiGet } = await import('./app.js');
         state.cards = await apiGet('/cards');
         renderBoard(state.cards);
         updateColumnCounts();
