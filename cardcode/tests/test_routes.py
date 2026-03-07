@@ -258,6 +258,27 @@ async def test_delete_last_column_returns_400(client):
 
 
 @pytest.mark.asyncio
+async def test_create_card_invalid_column_returns_400(client):
+    resp = await client.post(
+        "/api/cards", json={"title": "Bad col", "column_name": "nonexistent"}
+    )
+    assert resp.status_code == 400
+    assert "nonexistent" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_move_card_invalid_column_returns_400(client):
+    create = await client.post("/api/cards", json={"title": "Moveable"})
+    card_id = create.json()["id"]
+    resp = await client.patch(
+        f"/api/cards/{card_id}/move",
+        json={"column_name": "nonexistent", "position": 1.0},
+    )
+    assert resp.status_code == 400
+    assert "nonexistent" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
 @patch("cardcode.routes.TmuxManager")
 async def test_stop_session(mock_tmux_cls, client):
     mock_tmux = MagicMock()

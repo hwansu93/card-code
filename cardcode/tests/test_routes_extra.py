@@ -33,6 +33,9 @@ async def test_list_archived_empty(client):
 
 @pytest.mark.asyncio
 async def test_list_archived_returns_only_archived_cards(client):
+    # Create the archive column first
+    await client.post("/api/columns", json={"name": "archive"})
+
     await client.post("/api/cards", json={"title": "Active card"})
     c2 = await client.post("/api/cards", json={"title": "Archived card"})
     card_id = c2.json()["id"]
@@ -53,6 +56,9 @@ async def test_list_archived_returns_only_archived_cards(client):
 
 @pytest.mark.asyncio
 async def test_list_archived_multiple_cards(client):
+    # Create the archive column first
+    await client.post("/api/columns", json={"name": "archive"})
+
     for i in range(3):
         c = await client.post("/api/cards", json={"title": f"Card {i}"})
         await client.patch(
