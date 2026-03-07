@@ -210,7 +210,13 @@ function setupArchiveDrawer() {
         list.querySelectorAll('.delete-archive-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (!confirm('Permanently delete this card?')) return;
+                const confirmed = await showConfirmDialog({
+                    title: 'Delete card permanently?',
+                    message: 'This cannot be undone.',
+                    confirmText: 'Delete',
+                    danger: true,
+                });
+                if (!confirmed) return;
                 const cardId = btn.dataset.cardId;
                 const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
                 await fetch(`${basePath}/api/cards/${cardId}`, { method: 'DELETE' });
@@ -318,6 +324,62 @@ function setupSettingsDrawer() {
         const msg = document.getElementById('settings-saved-msg');
         msg.style.display = 'inline';
         setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    });
+
+    // Test Tmux Connection
+    document.getElementById('test-tmux-connection')?.addEventListener('click', async () => {
+        const btn = document.getElementById('test-tmux-connection');
+        btn.disabled = true;
+        try {
+            const resp = await fetch(`${basePath}/api/settings/integrations`);
+            const data = await resp.json();
+            if (data.tmux) {
+                showToast({ title: 'Tmux connected', type: 'success' });
+            } else {
+                showToast({ title: 'Tmux not detected', message: 'Check that tmux is installed', type: 'error' });
+            }
+        } catch {
+            showToast({ title: 'Connection test failed', type: 'error' });
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // Test Claude Dir
+    document.getElementById('test-claude-dir')?.addEventListener('click', async () => {
+        const btn = document.getElementById('test-claude-dir');
+        btn.disabled = true;
+        try {
+            const resp = await fetch(`${basePath}/api/settings/integrations`);
+            const data = await resp.json();
+            if (data.claude) {
+                showToast({ title: 'Claude CLI detected', type: 'success' });
+            } else {
+                showToast({ title: 'Claude CLI not found', message: 'Check that claude is installed and in PATH', type: 'error' });
+            }
+        } catch {
+            showToast({ title: 'Connection test failed', type: 'error' });
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // Health Check
+    document.getElementById('health-check-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('health-check-btn');
+        const healthEl = document.getElementById('settings-health');
+        btn.disabled = true;
+        try {
+            const resp = await fetch(`${basePath}/health`);
+            const data = await resp.json();
+            healthEl.textContent = data.status === 'ok' ? 'Healthy' : 'Unhealthy';
+            healthEl.style.color = data.status === 'ok' ? 'var(--success)' : 'var(--danger)';
+        } catch {
+            healthEl.textContent = 'Unreachable';
+            healthEl.style.color = 'var(--danger)';
+        } finally {
+            btn.disabled = false;
+        }
     });
 }
 
@@ -481,14 +543,37 @@ function setupTerminalViewer() {
     // Resize handle for terminal panel
     setupResizeHandle();
 
-    // Ctrl+F search in terminal
+    // Close button for terminal panel
+    document.getElementById('terminal-close')?.addEventListener('click', () => {
+        document.getElementById('terminal-panel')?.classList.add('collapsed');
+    });
+
+    // Ctrl+F search in terminal — inline search bar
+    let searchVisible = false;
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'terminal-search-input';
+    searchInput.placeholder = 'Search...';
+    searchInput.style.display = 'none';
+    document.querySelector('.terminal-panel-actions')?.appendChild(searchInput);
+
+    searchInput.addEventListener('input', () => {
+        if (searchAddon && searchInput.value) searchAddon.findNext(searchInput.value);
+    });
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchAddon?.findNext(searchInput.value);
+        if (e.key === 'Escape') {
+            searchInput.style.display = 'none';
+            searchVisible = false;
+        }
+    });
+
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'f' && term && panel.offsetWidth > 0) {
             e.preventDefault();
-            const query = prompt('Search terminal:');
-            if (query && searchAddon) {
-                searchAddon.findNext(query);
-            }
+            searchVisible = !searchVisible;
+            searchInput.style.display = searchVisible ? 'block' : 'none';
+            if (searchVisible) searchInput.focus();
         }
     });
 
@@ -514,6 +599,9 @@ function setupTerminalViewer() {
         currentCardId = cardId;
         state.selectedCardId = cardId;
         titleEl.textContent = cardTitle || 'Session';
+
+        // Show the terminal panel
+        document.getElementById('terminal-panel')?.classList.remove('collapsed');
 
         // Highlight selected card
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);

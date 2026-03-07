@@ -68,10 +68,10 @@
                     <h2>Welcome to CardCode</h2>
                     <p>Your Kanban dashboard for Claude Code sessions.</p>
                     <div class="onboarding-actions">
-                        <div class="onboarding-card" onclick="document.getElementById('new-card-btn').click()">
-                            <i data-lucide="scan-search"></i>
-                            <h3>Scan for sessions</h3>
-                            <p>Discover active Claude Code sessions running in tmux.</p>
+                        <div class="onboarding-card onboarding-card-info">
+                            <i data-lucide="radar"></i>
+                            <h3>Sessions auto-detected</h3>
+                            <p>Running Claude sessions are automatically discovered and appear as cards.</p>
                         </div>
                         <div class="onboarding-card" onclick="document.getElementById('new-card-btn').click()">
                             <i data-lucide="plus-circle"></i>
@@ -88,7 +88,7 @@
             </div>
         </main>
 
-        <aside class="terminal-panel" id="terminal-panel" role="complementary" aria-label="Terminal output">
+        <aside class="terminal-panel collapsed" id="terminal-panel" role="complementary" aria-label="Terminal output">
             <div id="terminal-resize-handle" class="terminal-resize-handle"></div>
             <div class="terminal-panel-header" id="terminal-panel-header">
                 <div class="terminal-header-info">
@@ -98,6 +98,9 @@
                 <div class="terminal-panel-actions">
                     <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh">
                         <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <button id="terminal-close" class="btn-icon-sm" title="Close terminal">
+                        <i data-lucide="x"></i>
                     </button>
                     <label class="auto-refresh-label">
                         <input type="checkbox" id="terminal-auto-refresh" checked> Auto

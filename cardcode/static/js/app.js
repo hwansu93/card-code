@@ -46,6 +46,9 @@ export async function apiDelete(path) {
 
 // Initialize
 async function init() {
+    const board = document.getElementById('board');
+    board.innerHTML = '<div class="board-loading">Loading...</div>';
+
     // Load initial data — columns first so renderBoard can use them
     state.columns = await apiGet('/columns');
     state.cards = await apiGet('/cards');
@@ -93,4 +96,14 @@ async function init() {
     import('./notifications.js').then(m => m.setupNotifications()).catch(() => {});
 }
 
-init().catch(console.error);
+init().catch((err) => {
+    console.error('Init failed:', err);
+    const board = document.getElementById('board');
+    board.innerHTML = `
+        <div class="board-error">
+            <h2>Unable to connect</h2>
+            <p>Could not reach the CardCode server.</p>
+            <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+        </div>
+    `;
+});

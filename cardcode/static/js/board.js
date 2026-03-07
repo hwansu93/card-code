@@ -2,6 +2,7 @@ import { createCardElement } from './cards.js';
 import { apiPatch, apiPost, apiDelete, apiGet } from './app.js';
 import { state } from './app.js';
 import { showToast } from './notifications.js';
+import { showConfirmDialog } from './utils.js';
 
 const COLLAPSE_KEY = 'cardcode-collapsed-columns';
 
@@ -24,8 +25,43 @@ export function renderBoard(cards) {
     // Track existing card IDs so we only animate genuinely new cards
     const existingCardIds = new Set([...document.querySelectorAll('.card')].map(c => c.dataset.cardId));
 
-    // Preserve the empty-state element
-    const emptyState = document.getElementById('empty-state');
+    // Remove loading/error states if present
+    board.querySelectorAll('.board-loading, .board-error').forEach(el => el.remove());
+
+    // Preserve the empty-state element (or recreate if missing)
+    let emptyState = document.getElementById('empty-state');
+    if (!emptyState) {
+        emptyState = document.createElement('div');
+        emptyState.className = 'empty-state hidden';
+        emptyState.id = 'empty-state';
+        emptyState.innerHTML = `
+            <div class="empty-state-content">
+                <div class="empty-state-icon">
+                    <img src="/img/cardcode-icon.svg" alt="" class="empty-state-icon-img" width="64" height="64">
+                </div>
+                <h2>Welcome to CardCode</h2>
+                <p>Your Kanban dashboard for Claude Code sessions.</p>
+                <div class="onboarding-actions">
+                    <div class="onboarding-card onboarding-card-info">
+                        <i data-lucide="radar"></i>
+                        <h3>Sessions auto-detected</h3>
+                        <p>Running Claude sessions are automatically discovered and appear as cards.</p>
+                    </div>
+                    <div class="onboarding-card" onclick="document.getElementById('new-card-btn').click()">
+                        <i data-lucide="plus-circle"></i>
+                        <h3>Create your first card</h3>
+                        <p>Add a task card and spawn a Claude session for it.</p>
+                    </div>
+                    <div class="onboarding-card" onclick="document.getElementById('settings-btn').click()">
+                        <i data-lucide="columns-3"></i>
+                        <h3>Customize your columns</h3>
+                        <p>Configure workflow columns to match your process.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        board.appendChild(emptyState);
+    }
 
     // Remove all existing columns and the add-column button
     board.querySelectorAll('.column, .add-column-btn, .add-column-form').forEach(el => el.remove());
@@ -218,9 +254,13 @@ function showColumnMenu(col, anchorEl, cardCount) {
     deleteItem.addEventListener('click', async () => {
         menu.remove();
         if (cardCount > 0) {
-            if (!confirm(`Delete "${col.name}"? ${cardCount} card(s) will be moved to the first column.`)) {
-                return;
-            }
+            const confirmed = await showConfirmDialog({
+                title: 'Delete column',
+                message: `Cards will be moved to the first column.`,
+                confirmText: 'Delete',
+                danger: true,
+            });
+            if (!confirmed) return;
         }
         try {
             await apiDelete(`/columns/${col.id}`);
