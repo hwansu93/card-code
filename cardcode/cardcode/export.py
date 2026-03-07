@@ -5,33 +5,45 @@ from pathlib import Path
 
 
 async def export_board(db_path: Path) -> dict:
-    """Export all cards and queued prompts as JSON."""
+    """Export all cards, columns, and queued prompts as JSON."""
     async with aiosqlite.connect(db_path) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM cards ORDER BY position")
         cards = [dict(row) for row in await cursor.fetchall()]
+        cursor = await db.execute("SELECT * FROM columns ORDER BY position")
+        columns = [dict(row) for row in await cursor.fetchall()]
         cursor = await db.execute("SELECT * FROM queued_prompts ORDER BY created_at")
         prompts = [dict(row) for row in await cursor.fetchall()]
-    return {"cards": cards, "queued_prompts": prompts}
+    return {"cards": cards, "columns": columns, "queued_prompts": prompts}
 
 
 async def import_board(db_path: Path, data: dict) -> int:
-    """Import cards and prompts from exported JSON. Returns count of imported cards."""
+    """Import cards, columns, and prompts from exported JSON. Returns count of imported cards."""
     async with aiosqlite.connect(db_path) as db:
+        db.row_factory = aiosqlite.Row
+        for col in data.get("columns", []):
+            cursor = await db.execute(
+                "SELECT id FROM columns WHERE name = ?", (col["name"],)
+            )
+            if await cursor.fetchone() is None:
+                await db.execute(
+                    "INSERT INTO columns (id, name, position) VALUES (?, ?, ?)",
+                    (col["id"], col["name"], col["position"]),
+                )
         count = 0
         for card in data.get("cards", []):
-            columns = ", ".join(card.keys())
+            cols = ", ".join(card.keys())
             placeholders = ", ".join("?" for _ in card)
             await db.execute(
-                f"INSERT OR REPLACE INTO cards ({columns}) VALUES ({placeholders})",
+                f"INSERT OR REPLACE INTO cards ({cols}) VALUES ({placeholders})",
                 list(card.values()),
             )
             count += 1
         for prompt in data.get("queued_prompts", []):
-            columns = ", ".join(prompt.keys())
+            cols = ", ".join(prompt.keys())
             placeholders = ", ".join("?" for _ in prompt)
             await db.execute(
-                f"INSERT OR REPLACE INTO queued_prompts ({columns}) VALUES ({placeholders})",
+                f"INSERT OR REPLACE INTO queued_prompts ({cols}) VALUES ({placeholders})",
                 list(prompt.values()),
             )
         await db.commit()

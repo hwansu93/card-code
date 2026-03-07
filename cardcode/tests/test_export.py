@@ -58,3 +58,59 @@ async def test_export_import_roundtrip(client):
     assert resp.status_code == 200
     assert resp.json()["imported"] == 2
     assert len((await client.get("/api/cards")).json()) == 2
+
+
+@pytest.mark.asyncio
+async def test_export_includes_columns(client):
+    await client.post("/api/columns", json={"name": "In Progress"})
+    await client.post("/api/columns", json={"name": "Done"})
+    resp = await client.post("/api/export")
+    assert resp.status_code == 200
+    export_data = resp.json()
+    assert "columns" in export_data
+    names = [c["name"] for c in export_data["columns"]]
+    assert "In Progress" in names
+    assert "Done" in names
+
+
+@pytest.mark.asyncio
+async def test_import_creates_new_columns(client):
+    data = {
+        "cards": [],
+        "columns": [
+            {"id": "col_1", "name": "Backlog", "position": 1.0},
+            {"id": "col_2", "name": "Review", "position": 2.0},
+        ],
+    }
+    resp = await client.post("/api/import", json=data)
+    assert resp.status_code == 200
+    cols = (await client.get("/api/columns")).json()
+    names = [c["name"] for c in cols]
+    assert "Backlog" in names
+    assert "Review" in names
+
+
+@pytest.mark.asyncio
+async def test_import_skips_existing_columns(client):
+    await client.post("/api/columns", json={"name": "Todo"})
+    cols_before = (await client.get("/api/columns")).json()
+    todo_count_before = sum(1 for c in cols_before if c["name"] == "Todo")
+
+    data = {
+        "cards": [],
+        "columns": [
+            {"id": "col_dup", "name": "Todo", "position": 5.0},
+        ],
+    }
+    await client.post("/api/import", json=data)
+    cols_after = (await client.get("/api/columns")).json()
+    todo_count_after = sum(1 for c in cols_after if c["name"] == "Todo")
+    assert todo_count_after == todo_count_before
+
+
+@pytest.mark.asyncio
+async def test_import_without_columns_key(client):
+    data = {"cards": []}
+    resp = await client.post("/api/import", json=data)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 0
