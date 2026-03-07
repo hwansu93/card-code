@@ -395,6 +395,35 @@ function setupTerminalViewer() {
         }
     }
 
+    // Terminal input handler
+    const terminalInput = document.getElementById('terminal-input');
+    const terminalInputArea = document.getElementById('terminal-input-area');
+
+    terminalInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && terminalInput.value.trim()) {
+            e.preventDefault();
+            const text = terminalInput.value.trim();
+            terminalInput.value = '';
+            terminalInput.disabled = true;
+            try {
+                await fetch(`${basePath}/api/cards/${currentCardId}/prompt`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+                // Refresh terminal output after sending
+                setTimeout(() => {
+                    if (currentCardId) loadTerminalOutput(currentCardId);
+                }, 500);
+            } catch (err) {
+                console.error('Prompt send failed:', err);
+            } finally {
+                terminalInput.disabled = false;
+                terminalInput.focus();
+            }
+        }
+    });
+
     // Expose globally for card click handler
     window.__openTerminalViewer = async (cardId, cardTitle) => {
         // Close other drawers
@@ -409,6 +438,14 @@ function setupTerminalViewer() {
         overlay.classList.add('active');
 
         await loadTerminalOutput(cardId);
+
+        // Show/hide input based on whether it's an external session
+        const card = (await import('./app.js')).state.cards.find(c => c.id === cardId);
+        if (card && card.is_external) {
+            terminalInputArea.classList.add('hidden');
+        } else {
+            terminalInputArea.classList.remove('hidden');
+        }
 
         if (autoRefreshCheck.checked) startAutoRefresh();
         if (typeof lucide !== 'undefined') lucide.createIcons();

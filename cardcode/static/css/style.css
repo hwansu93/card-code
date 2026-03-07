@@ -1196,6 +1196,36 @@ dialog textarea {
     min-height: 100%;
 }
 
+/* Terminal input */
+
+.terminal-input-area {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+
+.terminal-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    transition: border-color var(--transition);
+}
+
+.terminal-input:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.terminal-input-area.hidden {
+    display: none;
+}
+
 /* Light mode terminal stays dark */
 [data-theme="light"] .terminal-output {
     background: #1a1a2e;
