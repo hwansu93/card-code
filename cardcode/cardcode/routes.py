@@ -58,7 +58,9 @@ async def create_card(request: Request, body: CardCreate) -> Card:
             "SELECT COALESCE(MAX(position), 0) + 1 FROM cards WHERE column_name = ?",
             (body.column_name,),
         )
-        position = (await cursor.fetchone())[0]
+        row = await cursor.fetchone()
+        assert row is not None
+        position = row[0]
 
         await db.execute(
             """INSERT INTO cards (id, title, description, project, project_path,
@@ -353,7 +355,7 @@ async def save_settings(request: Request) -> dict:
 
 
 @router.get("/settings/integrations")
-async def check_integrations(request: Request) -> dict:
+async def check_integrations(_request: Request) -> dict:
     """Check if required tools are available."""
     import shutil
     return {
