@@ -91,6 +91,25 @@ def detect_session_status(pane_text: str, session_alive: bool) -> str:
     return "alive"
 
 
+def _session_name_to_title(session_name: str) -> str:
+    """Convert a tmux session name to a human-readable title."""
+    name = session_name
+    # Remove cc- prefix from CardCode-spawned sessions
+    if name.startswith("cc-"):
+        name = name[3:]
+    # Remove trailing hex suffix (e.g., -a1b2c3)
+    parts = name.rsplit("-", 1)
+    if len(parts) == 2 and len(parts[1]) >= 6:
+        try:
+            int(parts[1], 16)
+            name = parts[0]
+        except ValueError:
+            pass
+    # Replace separators with spaces and title-case
+    name = name.replace("_", " ").replace("-", " ")
+    return name.title()
+
+
 async def watcher_loop(config: CardCodeConfig, ws_manager, interval: float = 5.0):
     """Background loop that polls tmux sessions and updates card metrics."""
     tmux = TmuxManager(config.tmux_socket)
@@ -171,11 +190,12 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
         for session in unmatched:
             now = datetime.now(timezone.utc).isoformat()
             card_id = generate_ksuid()
+            title = _session_name_to_title(session["name"])
             await db.execute(
                 """INSERT INTO cards (id, title, column_name, position, tmux_session,
                    session_status, created_at, updated_at)
                    VALUES (?, ?, 'active', 0, ?, 'alive', ?, ?)""",
-                (card_id, f"Auto: {session['name']}", session["name"], now, now),
+                (card_id, title, session["name"], now, now),
             )
 
         # Auto-discover external (non-tmux) Claude processes
@@ -185,7 +205,8 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
         for ext in unmatched_ext:
             now = datetime.now(timezone.utc).isoformat()
             card_id = generate_ksuid()
-            title = f"External: {ext.get('cwd', '').split('/')[-1] or 'claude'}"
+            dir_name = ext.get("cwd", "").split("/")[-1] or "Claude"
+            title = dir_name.replace("_", " ").replace("-", " ").title()
             await db.execute(
                 """INSERT INTO cards (id, title, column_name, position, session_id,
                    project_path, session_status, is_external, created_at, updated_at)

@@ -18,8 +18,14 @@ export function createCardElement(card) {
         ? `<span class="provider-badge">${card.provider}</span>`
         : '';
 
+    // Clawd icon for Claude sessions
+    const clawdIcon = (card.provider === 'claude-code' || card.tmux_session || card.is_external)
+        ? '<img src="/img/clawd.png" class="card-icon" alt="">'
+        : '';
+
     // Title row
     let html = `<div class="card-header">
+        ${clawdIcon}
         ${statusBadge}
         <span class="card-title">${escapeHtml(card.title)}</span>
         ${providerBadge}
@@ -38,8 +44,10 @@ export function createCardElement(card) {
         html += `<div class="card-description">${escapeHtml(preview)}</div>`;
     }
 
-    // Metrics for active cards
-    if (card.column_name === 'active' && card.session_status) {
+    // Metrics for active cards (only show when we have actual data)
+    const hasMetrics = card.cost_usd > 0 || card.input_tokens > 0 || card.output_tokens > 0 || card.context_pct > 0;
+
+    if (card.column_name === 'active' && card.session_status && hasMetrics) {
         html += `<div class="card-metrics">
             <span class="metric">$${(card.cost_usd || 0).toFixed(2)}</span>
             <span class="metric">${formatTokens(card.input_tokens || 0)}/${formatTokens(card.output_tokens || 0)}</span>
@@ -56,8 +64,8 @@ export function createCardElement(card) {
         </div>`;
     }
 
-    // Done card metrics
-    if (card.column_name === 'done') {
+    // Done card metrics (only show when we have actual data)
+    if (card.column_name === 'done' && hasMetrics) {
         html += `<div class="card-metrics card-metrics-final">
             <span class="metric">$${(card.cost_usd || 0).toFixed(2)}</span>
             <span class="metric">${formatTokens((card.input_tokens || 0) + (card.output_tokens || 0))} tok</span>

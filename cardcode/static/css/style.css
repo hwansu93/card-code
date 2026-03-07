@@ -1226,6 +1226,15 @@ dialog textarea {
     display: none;
 }
 
+/* Card icon */
+
+.card-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
 /* Light mode terminal stays dark */
 [data-theme="light"] .terminal-output {
     background: #1a1a2e;
