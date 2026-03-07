@@ -81,3 +81,54 @@ async def test_projects_and_config(client):
     resp = await client.get("/api/config")
     assert resp.status_code == 200
     assert resp.json()["port"] == 8420
+
+
+@pytest.mark.asyncio
+async def test_column_lifecycle(client):
+    """Test creating, renaming, reordering, and deleting columns."""
+    # List default columns
+    resp = await client.get("/api/columns")
+    assert resp.status_code == 200
+    columns = resp.json()
+    assert len(columns) == 5
+
+    # Create new column
+    resp = await client.post("/api/columns", json={"name": "testing"})
+    assert resp.status_code == 201
+    new_col = resp.json()
+    assert new_col["name"] == "testing"
+
+    # Rename it
+    resp = await client.patch(f"/api/columns/{new_col['id']}", json={"name": "qa"})
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "qa"
+
+    # Create a card in the renamed column
+    resp = await client.post("/api/cards", json={"title": "QA task", "column_name": "qa"})
+    assert resp.status_code == 201
+    card_id = resp.json()["id"]
+
+    # Delete the column - card should move to first column
+    resp = await client.delete(f"/api/columns/{new_col['id']}")
+    assert resp.status_code == 204
+
+    # Verify card moved
+    resp = await client.get("/api/cards")
+    card = next(c for c in resp.json() if c["id"] == card_id)
+    assert card["column_name"] == "backlog"
+
+
+@pytest.mark.asyncio
+async def test_card_column_validation(client):
+    """Cards cannot be created or moved to nonexistent columns."""
+    resp = await client.post("/api/cards", json={"title": "Test", "column_name": "fake"})
+    assert resp.status_code == 400
+
+    # Create valid card then try moving to fake column
+    resp = await client.post("/api/cards", json={"title": "Test"})
+    card_id = resp.json()["id"]
+    resp = await client.patch(
+        f"/api/cards/{card_id}/move",
+        json={"column_name": "fake", "position": 1.0},
+    )
+    assert resp.status_code == 400
