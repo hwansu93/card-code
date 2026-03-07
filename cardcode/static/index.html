@@ -46,59 +46,90 @@
         </div>
     </header>
 
-    <main class="board" id="board">
-        <div class="column" data-column="backlog">
-            <div class="column-header"><h2>Backlog</h2><span class="column-count">0</span></div>
-            <div class="column-cards" id="col-backlog"></div>
-        </div>
-        <div class="column" data-column="queue">
-            <div class="column-header"><h2>Queue</h2><span class="column-count">0</span></div>
-            <div class="column-cards" id="col-queue"></div>
-        </div>
-        <div class="column" data-column="active">
-            <div class="column-header"><h2>Active</h2><span class="column-count">0</span></div>
-            <div class="column-cards" id="col-active"></div>
-        </div>
-        <div class="column" data-column="review">
-            <div class="column-header"><h2>Review</h2><span class="column-count">0</span></div>
-            <div class="column-cards" id="col-review"></div>
-        </div>
-        <div class="column" data-column="done">
-            <div class="column-header">
-                <h2>Done</h2><span class="column-count">0</span>
-                <button class="btn btn-small btn-ghost" id="clear-done"><i data-lucide="archive"></i> Clear</button>
+    <div class="app-layout">
+        <main class="board" id="board">
+            <div class="column" data-column="backlog">
+                <div class="column-header"><h2>Backlog</h2><span class="column-count">0</span></div>
+                <div class="column-cards" id="col-backlog"></div>
             </div>
-            <div class="column-cards" id="col-done"></div>
-        </div>
+            <div class="column" data-column="queue">
+                <div class="column-header"><h2>Queue</h2><span class="column-count">0</span></div>
+                <div class="column-cards" id="col-queue"></div>
+            </div>
+            <div class="column" data-column="active">
+                <div class="column-header"><h2>Active</h2><span class="column-count">0</span></div>
+                <div class="column-cards" id="col-active"></div>
+            </div>
+            <div class="column" data-column="review">
+                <div class="column-header"><h2>Review</h2><span class="column-count">0</span></div>
+                <div class="column-cards" id="col-review"></div>
+            </div>
+            <div class="column" data-column="done">
+                <div class="column-header">
+                    <h2>Done</h2><span class="column-count">0</span>
+                    <button class="btn btn-small btn-ghost" id="clear-done"><i data-lucide="archive"></i> Clear</button>
+                </div>
+                <div class="column-cards" id="col-done"></div>
+            </div>
 
-        <!-- Empty State Overlay -->
-        <div class="empty-state hidden" id="empty-state">
-            <div class="empty-state-content">
-                <div class="empty-state-icon">
-                    <img src="/img/cardcode-icon.svg" alt="" class="empty-state-icon-img" width="64" height="64">
+            <!-- Empty State Overlay -->
+            <div class="empty-state hidden" id="empty-state">
+                <div class="empty-state-content">
+                    <div class="empty-state-icon">
+                        <img src="/img/cardcode-icon.svg" alt="" class="empty-state-icon-img" width="64" height="64">
+                    </div>
+                    <h2>Welcome to CardCode</h2>
+                    <p>Your Kanban dashboard for Claude Code sessions.</p>
+                    <div class="empty-state-steps">
+                        <div class="step">
+                            <span class="step-key">N</span>
+                            <span>Create your first card</span>
+                        </div>
+                        <div class="step">
+                            <span class="step-key">Drag</span>
+                            <span>Move cards between columns to manage workflow</span>
+                        </div>
+                        <div class="step">
+                            <span class="step-key">?</span>
+                            <span>View all keyboard shortcuts</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="document.getElementById('new-card-btn').click()">
+                        Create First Card
+                    </button>
                 </div>
-                <h2>Welcome to CardCode</h2>
-                <p>Your Kanban dashboard for Claude Code sessions.</p>
-                <div class="empty-state-steps">
-                    <div class="step">
-                        <span class="step-key">N</span>
-                        <span>Create your first card</span>
-                    </div>
-                    <div class="step">
-                        <span class="step-key">Drag</span>
-                        <span>Move cards between columns to manage workflow</span>
-                    </div>
-                    <div class="step">
-                        <span class="step-key">?</span>
-                        <span>View all keyboard shortcuts</span>
-                    </div>
-                </div>
-                <button class="btn btn-primary" onclick="document.getElementById('new-card-btn').click()">
-                    Create First Card
-                </button>
             </div>
-        </div>
-    </main>
+        </main>
+
+        <aside class="terminal-panel" id="terminal-panel">
+            <div class="terminal-panel-header" id="terminal-panel-header">
+                <div class="terminal-header-info">
+                    <h3><i data-lucide="terminal"></i> <span id="terminal-card-title">Terminal</span></h3>
+                    <span class="terminal-session-name" id="terminal-session-name"></span>
+                </div>
+                <div class="terminal-panel-actions">
+                    <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <label class="auto-refresh-label">
+                        <input type="checkbox" id="terminal-auto-refresh" checked> Auto
+                    </label>
+                </div>
+            </div>
+            <div class="terminal-output" id="terminal-output">
+                <pre id="terminal-pre"></pre>
+            </div>
+            <div class="terminal-input-area" id="terminal-input-area">
+                <input type="text" id="terminal-input" class="terminal-input" placeholder="Send command..." autocomplete="off">
+            </div>
+            <div class="terminal-panel-empty" id="terminal-panel-empty">
+                <div class="terminal-empty-content">
+                    <i data-lucide="terminal"></i>
+                    <p>Select a card to view its terminal</p>
+                </div>
+            </div>
+        </aside>
+    </div>
 
     <!-- Settings Drawer -->
     <aside class="drawer drawer-right" id="settings-drawer">
@@ -171,30 +202,6 @@
         </div>
     </aside>
 
-    <!-- Terminal Viewer -->
-    <aside class="drawer drawer-right drawer-wide" id="terminal-drawer">
-        <div class="drawer-header">
-            <div class="terminal-header-info">
-                <h3><i data-lucide="terminal"></i> <span id="terminal-card-title">Session</span></h3>
-                <span class="terminal-session-name" id="terminal-session-name"></span>
-            </div>
-            <div class="terminal-header-actions">
-                <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh">
-                    <i data-lucide="refresh-cw"></i>
-                </button>
-                <label class="auto-refresh-label">
-                    <input type="checkbox" id="terminal-auto-refresh" checked> Auto
-                </label>
-                <button class="btn btn-icon drawer-close" id="terminal-close"><i data-lucide="x"></i></button>
-            </div>
-        </div>
-        <div class="terminal-output" id="terminal-output">
-            <pre id="terminal-pre"></pre>
-        </div>
-        <div class="terminal-input-area" id="terminal-input-area">
-            <input type="text" id="terminal-input" class="terminal-input" placeholder="Send command..." autocomplete="off">
-        </div>
-    </aside>
     <div class="drawer-overlay" id="drawer-overlay"></div>
 
     <!-- Card Dialog -->

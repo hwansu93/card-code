@@ -330,12 +330,10 @@ function setupSettingsDrawer() {
     });
 }
 
-// ── Terminal Viewer ─────────────────────────────────────────────
+// ── Terminal Panel (persistent right panel) ─────────────────────
 
 function setupTerminalViewer() {
-    const drawer = document.getElementById('terminal-drawer');
-    const overlay = document.getElementById('drawer-overlay');
-    const closeBtn = document.getElementById('terminal-close');
+    const emptyState = document.getElementById('terminal-panel-empty');
     const refreshBtn = document.getElementById('terminal-refresh');
     const autoRefreshCheck = document.getElementById('terminal-auto-refresh');
     const outputPre = document.getElementById('terminal-pre');
@@ -345,8 +343,6 @@ function setupTerminalViewer() {
 
     let currentCardId = null;
     let autoRefreshInterval = null;
-
-    closeBtn.addEventListener('click', closeAllDrawers);
 
     refreshBtn.addEventListener('click', () => {
         if (currentCardId) loadTerminalOutput(currentCardId);
@@ -372,6 +368,10 @@ function setupTerminalViewer() {
         autoRefreshInterval = setInterval(() => {
             if (currentCardId) loadTerminalOutput(currentCardId);
         }, 3000);
+    }
+
+    function hideEmptyState() {
+        emptyState.classList.add('hidden');
     }
 
     async function loadTerminalOutput(cardId) {
@@ -411,7 +411,6 @@ function setupTerminalViewer() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text }),
                 });
-                // Refresh terminal output after sending
                 setTimeout(() => {
                     if (currentCardId) loadTerminalOutput(currentCardId);
                 }, 500);
@@ -426,17 +425,22 @@ function setupTerminalViewer() {
 
     // Expose globally for card click handler
     window.__openTerminalViewer = async (cardId, cardTitle) => {
-        // Close other drawers
-        document.getElementById('archive-drawer').classList.remove('open');
-        document.getElementById('settings-drawer').classList.remove('open');
+        // Deselect previous card
+        if (currentCardId) {
+            const prev = document.querySelector(`[data-card-id="${currentCardId}"]`);
+            if (prev) prev.classList.remove('selected');
+        }
 
         currentCardId = cardId;
+        window.__selectedCardId = cardId;
         titleEl.textContent = cardTitle || 'Session';
         outputPre.textContent = 'Loading...';
 
-        drawer.classList.add('open');
-        overlay.classList.add('active');
+        // Highlight selected card
+        const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
+        if (cardEl) cardEl.classList.add('selected');
 
+        hideEmptyState();
         await loadTerminalOutput(cardId);
 
         // Show/hide input based on whether it's an external session
@@ -450,12 +454,6 @@ function setupTerminalViewer() {
         if (autoRefreshCheck.checked) startAutoRefresh();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
-
-    // Clean up on close
-    overlay.addEventListener('click', () => {
-        stopAutoRefresh();
-        currentCardId = null;
-    });
 }
 
 // ── Shared Drawer Helpers ───────────────────────────────────────
@@ -463,7 +461,6 @@ function setupTerminalViewer() {
 function closeAllDrawers() {
     document.getElementById('archive-drawer').classList.remove('open');
     document.getElementById('settings-drawer').classList.remove('open');
-    document.getElementById('terminal-drawer').classList.remove('open');
     document.getElementById('drawer-overlay').classList.remove('active');
 }
 

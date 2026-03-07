@@ -1,3 +1,5 @@
+const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
+
 export function createCardElement(card) {
     const el = document.createElement('div');
     el.className = 'card';
@@ -18,14 +20,14 @@ export function createCardElement(card) {
         ? `<span class="provider-badge">${card.provider}</span>`
         : '';
 
-    // Clawd icon for Claude sessions
-    const clawdIcon = (card.provider === 'claude-code' || card.tmux_session || card.is_external)
-        ? '<img src="/img/clawd.png" class="card-icon" alt="">'
+    // Card icon for Claude sessions
+    const cardIcon = (card.provider === 'claude-code' || card.tmux_session || card.is_external)
+        ? `<img src="${basePath}/img/cardcode-icon.svg" class="card-icon" alt="">`
         : '';
 
     // Title row
     let html = `<div class="card-header">
-        ${clawdIcon}
+        ${cardIcon}
         ${statusBadge}
         <span class="card-title">${escapeHtml(card.title)}</span>
         ${providerBadge}
