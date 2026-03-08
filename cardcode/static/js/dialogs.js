@@ -1,6 +1,6 @@
 import { state, apiPost, apiPatch, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
-import { escapeHtml, showConfirmDialog } from './utils.js';
+import { escapeHtml, showConfirmDialog, getTerminalTheme } from './utils.js';
 import { showToast } from './notifications.js';
 
 export function setupDialogs() {
@@ -391,12 +391,14 @@ function updateInspectorMeta(card) {
     const metaEl = document.getElementById('inspector-meta');
     if (!metaEl || !card) return;
     const parts = [];
-    if (card.model) {
-        parts.push(`<span class="model-chip">${escapeHtml(card.model)}</span>`);
+    const providerNames = { 'claude-code': 'Claude', 'gemini': 'Gemini' };
+    const modelName = providerNames[card.provider] || card.provider || '';
+    if (modelName) {
+        parts.push(`<span class="model-chip">${escapeHtml(modelName)}</span>`);
     }
     if (card.session_status) {
         if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
-        parts.push(`<span>${escapeHtml(card.session_status)}</span>`);
+        parts.push(`<span class="card-status-dot status-${card.session_status}"></span>`);
     }
     if (card.cost_usd > 0) {
         if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
@@ -412,32 +414,6 @@ let fetchController = null;
 let autoRefreshInterval = null;
 let currentInspectorCardId = null;
 let closeTimeout = null;
-
-function getTerminalTheme() {
-    const style = getComputedStyle(document.documentElement);
-    return {
-        background: style.getPropertyValue('--terminal-bg').trim() || '#0f1014',
-        foreground: style.getPropertyValue('--terminal-fg').trim() || '#e8e6e3',
-        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#4daa90',
-        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(77, 170, 144, 0.3)',
-        black: '#1a1c24',
-        red: '#ef4444',
-        green: '#4ade80',
-        yellow: '#fbbf24',
-        blue: '#60a5fa',
-        magenta: '#c084fc',
-        cyan: '#22d3ee',
-        white: '#e8e6e3',
-        brightBlack: '#5c5955',
-        brightRed: '#f87171',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#f5f5f4',
-    };
-}
 
 function initXterm() {
     if (term) return;

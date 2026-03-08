@@ -4,6 +4,32 @@ export function escapeHtml(str) {
     return div.innerHTML;
 }
 
+export function getTerminalTheme() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        background: style.getPropertyValue('--terminal-bg').trim() || '#141418',
+        foreground: style.getPropertyValue('--terminal-fg').trim() || '#e0e0e8',
+        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#4daa90',
+        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(77, 170, 144, 0.3)',
+        black: '#1a1c24',
+        red: '#ef4444',
+        green: '#4ade80',
+        yellow: '#fbbf24',
+        blue: '#60a5fa',
+        magenta: '#c084fc',
+        cyan: '#22d3ee',
+        white: '#e8e6e3',
+        brightBlack: '#5c5955',
+        brightRed: '#f87171',
+        brightGreen: '#86efac',
+        brightYellow: '#fde68a',
+        brightBlue: '#93c5fd',
+        brightMagenta: '#d8b4fe',
+        brightCyan: '#67e8f9',
+        brightWhite: '#f5f5f4',
+    };
+}
+
 export function showConfirmDialog({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false }) {
     return new Promise((resolve) => {
         let resolved = false;

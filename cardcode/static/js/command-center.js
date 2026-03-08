@@ -1,5 +1,5 @@
 import { state } from './app.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, getTerminalTheme } from './utils.js';
 import { showToast } from './notifications.js';
 
 const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
@@ -42,38 +42,12 @@ export function setupCommandCenter() {
     setupSidebarDrag();
 }
 
-function getTerminalTheme() {
-    const style = getComputedStyle(document.documentElement);
-    return {
-        background: style.getPropertyValue('--terminal-bg').trim() || '#0f1014',
-        foreground: style.getPropertyValue('--terminal-fg').trim() || '#e8e6e3',
-        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#4daa90',
-        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(77, 170, 144, 0.3)',
-        black: '#1a1c24',
-        red: '#ef4444',
-        green: '#4ade80',
-        yellow: '#fbbf24',
-        blue: '#60a5fa',
-        magenta: '#c084fc',
-        cyan: '#22d3ee',
-        white: '#e8e6e3',
-        brightBlack: '#5c5955',
-        brightRed: '#f87171',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#f5f5f4',
-    };
-}
-
 function populateSidebar() {
     const list = document.getElementById('cc-card-list');
     if (!list) return;
 
     const activeCards = state.cards.filter(c =>
-        c.tmux_session && ['alive', 'waiting', 'idle'].includes(c.status)
+        c.tmux_session && ['alive', 'waiting', 'idle'].includes(c.session_status)
     );
 
     if (activeCards.length === 0) {
@@ -83,7 +57,7 @@ function populateSidebar() {
 
     list.innerHTML = activeCards.map(card => `
         <div class="cc-sidebar-card" draggable="true" data-card-id="${card.id}">
-            <span class="card-status-dot status-${card.status}"></span>
+            <span class="card-status-dot status-${card.session_status}"></span>
             <span class="cc-sidebar-card-title">${escapeHtml(card.title)}</span>
             <button class="cc-add-btn" data-card-id="${card.id}" aria-label="Add to grid">
                 <i data-lucide="plus"></i>
@@ -148,14 +122,15 @@ function addTile(card) {
     const tileEl = document.createElement('div');
     tileEl.className = 'cc-tile';
 
-    const status = card.status || 'dead';
-    const model = card.model || '';
+    const status = card.session_status || 'dead';
+    const providerNames = { 'claude-code': 'Claude', 'gemini': 'Gemini' };
+    const modelName = providerNames[card.provider] || card.provider || '';
 
     tileEl.innerHTML = `
         <div class="cc-tile-header">
             <span class="card-status-dot status-${status}" data-tile-status></span>
             <span class="cc-tile-title">${escapeHtml(card.title)}</span>
-            ${model ? `<span class="cc-tile-model">${escapeHtml(model)}</span>` : ''}
+            ${modelName ? `<span class="cc-tile-model">${escapeHtml(modelName)}</span>` : ''}
             <div class="cc-tile-actions">
                 <button class="cc-tile-maximize" aria-label="Maximize" title="Maximize">
                     <i data-lucide="maximize-2"></i>
