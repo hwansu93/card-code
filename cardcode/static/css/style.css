@@ -57,7 +57,7 @@ a:focus-visible {
 }
 
 /* Mono for code/metrics/terminal */
-.mono, code, pre, .card-status-bar, .terminal-input {
+.mono, code, pre, .terminal-input {
     font-family: 'JetBrains Mono', 'SF Mono', monospace;
 }
 
