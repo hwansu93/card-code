@@ -19,16 +19,19 @@ export function setupCommandCenter() {
         if (isCC) {
             cc.classList.add('hidden');
             board.classList.remove('hidden');
-            toggle.querySelector('i').setAttribute('data-lucide', 'layout-grid');
+            toggle.innerHTML = '<i data-lucide="layout-grid"></i>';
             toggle.title = 'Command Center';
             disposeAllTiles();
         } else {
-            console.log('[CC] toggle clicked, switching to CC');
             board.classList.add('hidden');
             cc.classList.remove('hidden');
-            toggle.querySelector('i').setAttribute('data-lucide', 'kanban');
+            toggle.innerHTML = '<i data-lucide="kanban"></i>';
             toggle.title = 'Board View';
-            await populateSidebar();
+            try {
+                await populateSidebar();
+            } catch (err) {
+                console.error('[CC] populateSidebar error:', err);
+            }
             restoreLayout();
         }
         lucide.createIcons();
@@ -44,16 +47,13 @@ export function setupCommandCenter() {
 }
 
 async function populateSidebar() {
-    console.log('[CC] populateSidebar called');
     const list = document.getElementById('cc-card-list');
-    if (!list) { console.log('[CC] no list element'); return; }
+    if (!list) return;
 
     try {
-        console.log('[CC] fetching cards from', basePath + '/api/cards');
         const resp = await fetch(basePath + '/api/cards');
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const cards = await resp.json();
-        console.log('[CC] fetched', cards.length, 'cards');
         state.cards = cards;
     } catch (err) {
         console.error('[CC] Failed to fetch cards:', err);
