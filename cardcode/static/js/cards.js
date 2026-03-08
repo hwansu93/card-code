@@ -11,57 +11,55 @@ export function createCardElement(card) {
     el.setAttribute('role', 'article');
     el.setAttribute('aria-label', card.title);
     if (card.id === state.selectedCardId) el.classList.add('selected');
-    if (card.session_status) el.classList.add(`card-status-${card.session_status}`);
-    if (card.column_name === 'done') el.classList.add('card-done');
+    const status = card.session_status || 'dead';
+    el.classList.add(`card-status-${status}`);
+    if (card.column_name === 'done' || card.column_name === 'archive') el.classList.add('card-done');
+
+    // Provider icon SVGs
+    const providerIcons = {
+        'claude-code': '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10L6 2l4 8H2z" fill="currentColor" opacity="0.9"/></svg>',
+        'gemini': '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="6" cy="6" r="2" fill="currentColor"/></svg>',
+    };
+    const providerNames = { 'claude-code': 'Claude', 'gemini': 'Gemini' };
+    const providerKey = card.provider || '';
+    const providerIcon = providerIcons[providerKey] || '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" fill="currentColor" opacity="0.5"/></svg>';
+    const modelName = providerNames[providerKey] || (providerKey ? escapeHtml(providerKey) : '');
+
+    // Duration
+    const duration = card.started_at ? formatDuration(card.started_at) : '';
+
+    // Context percentage
+    const pct = Math.min((card.context_pct || 0) * 100, 100);
+    const fillClass = pct >= 80 ? 'critical' : pct >= 60 ? 'warning' : '';
+
+    // Cost
+    const costStr = card.cost_usd > 0 ? `$${card.cost_usd.toFixed(2)}` : '';
 
     let html = '';
 
-    // Tier 1 — Title (dominant)
+    // Title
     html += `<div class="card-title">${escapeHtml(card.title)}</div>`;
 
-    // Tier 2 — Metadata (project + relative time)
-    const project = card.project ? escapeHtml(card.project) : '';
-    const ago = timeAgo(card.updated_at);
-    if (project || ago) {
-        html += `<div class="card-meta">
-            <span class="card-meta-project">${project}</span>
-            <span class="card-meta-time">${ago}</span>
-        </div>`;
+    // Meta row: model chip + duration
+    if (modelName || duration) {
+        html += '<div class="card-meta-row">';
+        if (modelName) {
+            html += `<span class="model-chip">${providerIcon}<span class="model-name">${modelName}</span></span>`;
+        }
+        if (duration) {
+            html += `<span class="card-duration">${duration}</span>`;
+        }
+        html += '</div>';
     }
 
-    // Tier 3 — Status bar (compact inline capsule badges)
-    const statusParts = [];
-    if (card.session_status) {
-        statusParts.push(`<span class="status-capsule"><span class="card-status-dot card-status-dot-${card.session_status}"></span>${card.session_status}</span>`);
-    }
-    if (card.cost_usd > 0) {
-        statusParts.push(`<span class="status-capsule">$${card.cost_usd.toFixed(2)}</span>`);
-    }
-    const totalTokens = (card.input_tokens || 0) + (card.output_tokens || 0);
-    if (totalTokens > 0) {
-        const tokenLabel = totalTokens >= 1000
-            ? `${(totalTokens / 1000).toFixed(1)}k tokens`
-            : `${totalTokens} tokens`;
-        statusParts.push(`<span class="status-capsule">${tokenLabel}</span>`);
-    }
-    const pct = Math.min((card.context_pct || 0) * 100, 100);
-    if (pct > 0) {
-        const contextClass = pct >= 80 ? 'context-danger' : pct >= 60 ? 'context-warning' : '';
-        statusParts.push(`<span class="status-capsule ${contextClass}">${pct.toFixed(0)}%</span>`);
-    }
-    if (statusParts.length > 0) {
-        html += `<div class="card-status-bar">${statusParts.join('')}</div>`;
-    }
+    // Bottom bar: cost + status dot
+    html += '<div class="card-bottom">';
+    html += `<span class="card-cost">${costStr}</span>`;
+    html += `<span class="card-status-dot status-${status}"></span>`;
+    html += '</div>';
 
-    // Context gauge — thin 2px bar at very bottom
-    if (pct > 0) {
-        const gaugeClass = pct >= 80 ? 'gauge-danger' : pct >= 60 ? 'gauge-warning' : '';
-        html += `<div class="context-gauge">
-            <div class="context-gauge-bar">
-                <div class="context-gauge-fill ${gaugeClass}" style="width: ${pct}%"></div>
-            </div>
-        </div>`;
-    }
+    // Context gauge
+    html += `<div class="context-gauge"><div class="context-fill ${fillClass}" style="width:${pct}%"></div></div>`;
 
     el.innerHTML = html;
 
@@ -280,4 +278,17 @@ function timeAgo(isoString) {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
+}
+
+export function formatDuration(isoString) {
+    const start = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - start;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return '<1m';
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ${mins % 60}m`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ${hrs % 24}h`;
 }

@@ -776,164 +776,167 @@ a:focus-visible {
 /* --- Cards --- */
 
 .card {
-    position: relative;
-    background: var(--surface-card);
-    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 10px 12px;
-    cursor: grab;
-    transition: filter 120ms ease-out, border-color 120ms ease-out, background 120ms ease-out;
-}
-
-.card.card-entrance {
-    animation: cardFadeIn 200ms ease-out both;
+    padding: 10px 12px 6px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .card:hover {
-    filter: brightness(1.06);
-}
-
-.card:active {
-    cursor: grabbing;
+    background: var(--bg-elevated);
+    border-color: var(--border-focus);
 }
 
 .card.selected {
-    background: var(--accent-selection);
-    border-color: transparent;
+    border-left: 3px solid var(--accent);
+    padding-left: 9px;
 }
 
-/* Status dot indicator on the card (instead of left border) */
-.card.card-status-alive {
-    border-left: none;
+/* Status left-border accents */
+.card-status-alive { border-left: 3px solid var(--status-alive); padding-left: 9px; }
+.card-status-waiting { border-left: 3px solid var(--status-waiting); padding-left: 9px; }
+.card-status-idle { border-left: 3px solid var(--status-idle); padding-left: 9px; }
+.card-status-dead { border-left: 3px solid var(--status-dead); padding-left: 9px; }
+
+/* Selected overrides status border color */
+.card.selected.card-status-alive,
+.card.selected.card-status-waiting,
+.card.selected.card-status-idle,
+.card.selected.card-status-dead { border-left-color: var(--accent); }
+
+/* Card entrance animation */
+.card-entrance { animation: cardSlideIn 0.2s ease-out; }
+
+@keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.card.card-status-waiting {
-    border-left: none;
+/* Card flash animation (prompt sent) */
+@keyframes cardFadeInFlash {
+    0% { box-shadow: 0 0 0 2px var(--accent); }
+    100% { box-shadow: 0 0 0 2px transparent; }
 }
-
-.card.card-status-idle {
-    border-left: none;
-}
-
-.card.card-status-dead {
-    border-left: none;
-}
+.card-flash { animation: cardFadeInFlash 1s ease-out; }
 
 /* --- Card Title --- */
 
 .card-title {
-    font-family: var(--font-body);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-primary);
     line-height: 1.35;
-    overflow: hidden;
-    text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-}
-
-/* --- Card Metadata (project + time) --- */
-
-.card-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 4px;
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--text-muted);
-    line-height: 1;
-}
-
-.card-meta-project {
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
 }
 
-.card-meta-time {
-    flex-shrink: 0;
-    margin-left: 8px;
-}
+/* --- Card Meta Row (model chip + duration) --- */
 
-/* --- Card Status Bar (compact inline metrics) --- */
-
-.card-status-bar {
+.card-meta-row {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 6px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-muted);
-    line-height: 1;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
-.status-capsule {
+.model-chip {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     padding: 1px 6px;
-    background: var(--border-translucent);
-    border-radius: 9px;
-    white-space: nowrap;
+    background: var(--accent-muted);
+    border-radius: var(--radius-sm);
+    color: var(--accent-text);
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.provider-icon { flex-shrink: 0; opacity: 0.8; }
+
+.card-duration {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Card Bottom (cost + status dot) --- */
+
+.card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card-cost {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
 }
 
 .card-status-dot {
-    display: inline-block;
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--text-muted);
     flex-shrink: 0;
 }
 
-.card-status-dot-alive {
-    background: var(--status-alive);
-    box-shadow: 0 0 4px var(--status-alive);
-}
-.card-status-dot-waiting {
-    background: var(--status-waiting);
-    animation: pulse-dot 1.5s ease-in-out infinite;
-}
-.card-status-dot-idle { background: var(--status-idle); }
-.card-status-dot-dead { background: var(--status-dead); }
+.card-status-dot.status-alive { background: var(--status-alive); box-shadow: 0 0 4px var(--status-alive); }
+.card-status-dot.status-waiting { background: var(--status-waiting); }
+.card-status-dot.status-idle { background: var(--status-idle); }
+.card-status-dot.status-dead { background: var(--status-dead); }
 
-.card-status-bar .context-warning { color: var(--warning); }
-.card-status-bar .context-danger { color: var(--danger); }
+/* --- Context Gauge --- */
+
+.context-gauge {
+    height: 2px;
+    background: var(--border-subtle);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-top: auto;
+}
+
+.context-fill {
+    height: 100%;
+    background: var(--secondary);
+    border-radius: 1px;
+    transition: width 0.3s ease;
+}
+
+.context-fill.warning { background: var(--status-warning); }
+.context-fill.critical { background: var(--status-critical); }
 
 /* --- Card Overflow Button (hover-visible) --- */
 
 .card-overflow-btn {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    min-width: 28px;
-    min-height: 28px;
-    padding: 0;
+    top: 6px;
+    right: 6px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--surface-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity var(--transition), color var(--transition), background var(--transition);
 }
 
-.card:hover .card-overflow-btn {
-    opacity: 1;
-}
-
-.card-overflow-btn:hover {
-    color: var(--text-primary);
-    background: var(--bg-tertiary);
-}
+.card:hover .card-overflow-btn { opacity: 1; }
+.card-overflow-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 .card-overflow-btn svg,
 .card-overflow-btn i {
@@ -1002,43 +1005,6 @@ a:focus-visible {
 
 .card.card-done .card-title {
     color: var(--text-secondary);
-}
-
-.card.card-done .card-status-bar {
-    color: var(--text-muted);
-}
-
-/* --- Context Gauge --- */
-
-.context-gauge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    margin-top: 6px;
-}
-
-.context-gauge-bar {
-    flex: 1;
-    height: 2px;
-    background: var(--bg-tertiary);
-    border-radius: 1px;
-    overflow: hidden;
-}
-
-.context-gauge-fill {
-    height: 100%;
-    background: var(--accent);
-    border-radius: 1px;
-    transition: width var(--transition), background-color var(--transition);
-}
-
-.context-gauge-fill.gauge-warning {
-    background: var(--warning);
-}
-
-.context-gauge-fill.gauge-danger {
-    background: var(--danger);
 }
 
 /* --- Dialogs --- */
@@ -1285,15 +1251,6 @@ dialog textarea {
 }
 
 /* --- Animations --- */
-
-@keyframes cardFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
 
 /* --- Drawer --- */
 
