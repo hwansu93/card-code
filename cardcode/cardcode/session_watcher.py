@@ -53,6 +53,56 @@ def parse_jsonl_metrics(jsonl_path: Path) -> dict:
     return result
 
 
+def parse_pane_metrics(pane_text: str) -> dict:
+    """Parse cost/token/context metrics from captured tmux pane text.
+
+    Claude Code displays metrics in its status area. Various formats
+    are matched via regex.
+    """
+    result: dict = {}
+
+    # Cost patterns: "Cost: $0.12", "$1.23 cost"
+    cost_match = re.search(r'(?:cost[:\s]*)\$([0-9]+\.?[0-9]*)', pane_text, re.IGNORECASE)
+    if cost_match:
+        try:
+            result["cost_usd"] = float(cost_match.group(1))
+        except ValueError:
+            pass
+
+    # Context percentage: "Context: 67%", "context 80%"
+    ctx_match = re.search(r'(?:context[:\s]*)([0-9]+(?:\.[0-9]+)?)\s*%', pane_text, re.IGNORECASE)
+    if ctx_match:
+        try:
+            result["context_pct"] = float(ctx_match.group(1)) / 100.0
+        except ValueError:
+            pass
+
+    # Token patterns - "12.4k in" or "1,234 input"
+    in_match = re.search(r'([0-9][0-9,]*\.?[0-9]*)\s*k?\s*(?:input|in)\b', pane_text, re.IGNORECASE)
+    if in_match:
+        try:
+            val = in_match.group(1).replace(",", "")
+            tokens = float(val)
+            if "k" in in_match.group(0).lower():
+                tokens *= 1000
+            result["input_tokens"] = int(tokens)
+        except ValueError:
+            pass
+
+    out_match = re.search(r'([0-9][0-9,]*\.?[0-9]*)\s*k?\s*(?:output|out)\b', pane_text, re.IGNORECASE)
+    if out_match:
+        try:
+            val = out_match.group(1).replace(",", "")
+            tokens = float(val)
+            if "k" in out_match.group(0).lower():
+                tokens *= 1000
+            result["output_tokens"] = int(tokens)
+        except ValueError:
+            pass
+
+    return result
+
+
 _WAITING_PATTERNS = [
     r"\(y/n\)",
     r"\(Y/n\)",
@@ -110,6 +160,67 @@ def _session_name_to_title(session_name: str) -> str:
     return name.title()
 
 
+def _discover_jsonl(claude_dir: Path, project_path: str) -> Path | None:
+    """Try to find the most recent JSONL session file for a project.
+
+    Claude Code stores sessions under ~/.claude/projects/<hash>/sessions/.
+    We scan project dirs for one whose path matches, then return the newest .jsonl.
+    """
+    projects_dir = claude_dir / "projects"
+    if not projects_dir.is_dir():
+        return None
+
+    # Normalise for comparison
+    norm_project = project_path.rstrip("/")
+
+    for candidate in projects_dir.iterdir():
+        if not candidate.is_dir():
+            continue
+
+        # Check for a config file that maps to the project path
+        for config_name in ("project.json", "config.json", ".project"):
+            config_file = candidate / config_name
+            if config_file.exists():
+                try:
+                    text = config_file.read_text().strip()
+                    if norm_project in text:
+                        return _newest_jsonl(candidate)
+                except Exception:
+                    continue
+
+        # Heuristic: directory name might encode the project path
+        # Claude uses a hash of the absolute path as the directory name
+        # Check CLAUDE.md or any file that references the project path
+        claude_md = candidate / "CLAUDE.md"
+        if claude_md.exists():
+            try:
+                if norm_project in claude_md.read_text():
+                    return _newest_jsonl(candidate)
+            except Exception:
+                pass
+
+    # Last resort: find the most recently modified .jsonl across all project dirs
+    # Only if there's a single active one (avoid false matches)
+    return None
+
+
+def _newest_jsonl(project_dir: Path) -> Path | None:
+    """Return the most recently modified .jsonl file under a project dir."""
+    best: Path | None = None
+    best_mtime: float = 0
+
+    for jsonl in project_dir.rglob("*.jsonl"):
+        try:
+            mtime = jsonl.stat().st_mtime
+            if mtime > best_mtime:
+                best = jsonl
+                best_mtime = mtime
+        except OSError:
+            continue
+
+    return best
+
+
 async def watcher_loop(config: CardCodeConfig, ws_manager, interval: float = 5.0):
     """Background loop that polls tmux sessions and updates card metrics."""
     tmux = TmuxManager(config.tmux_socket)
@@ -141,9 +252,23 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
             new_status = detect_session_status(pane_text, session_alive=is_alive)
             old_status = card.get("session_status")
 
+            # Try to discover jsonl_path if not set
+            if not card.get("jsonl_path") and card.get("project_path"):
+                discovered = _discover_jsonl(config.claude_dir, card["project_path"])
+                if discovered:
+                    await db.execute(
+                        "UPDATE cards SET jsonl_path = ? WHERE id = ?",
+                        (str(discovered), card["id"]),
+                    )
+                    card["jsonl_path"] = str(discovered)
+
             metrics = {}
             if card.get("jsonl_path"):
                 metrics = parse_jsonl_metrics(Path(card["jsonl_path"]))
+
+            # Fall back to parsing metrics from pane text
+            if not metrics and pane_text:
+                metrics = parse_pane_metrics(pane_text)
 
             updates = {"session_status": new_status}
             updates.update(metrics)

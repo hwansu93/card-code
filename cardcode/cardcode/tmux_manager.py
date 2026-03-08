@@ -135,7 +135,7 @@ class TmuxManager:
     def capture_pane(self, session_name: str, lines: int = 50) -> str:
         result = subprocess.run(
             self._cmd(
-                "capture-pane", "-t", session_name, "-p", "-S", f"-{lines}"
+                "capture-pane", "-t", session_name, "-p", "-e", "-S", f"-{lines}"
             ),
             capture_output=True,
             text=True,

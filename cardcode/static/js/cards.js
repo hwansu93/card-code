@@ -37,6 +37,13 @@ export function createCardElement(card) {
     if (card.cost_usd > 0) {
         statusParts.push(`<span class="status-capsule">$${card.cost_usd.toFixed(2)}</span>`);
     }
+    const totalTokens = (card.input_tokens || 0) + (card.output_tokens || 0);
+    if (totalTokens > 0) {
+        const tokenLabel = totalTokens >= 1000
+            ? `${(totalTokens / 1000).toFixed(1)}k tokens`
+            : `${totalTokens} tokens`;
+        statusParts.push(`<span class="status-capsule">${tokenLabel}</span>`);
+    }
     const pct = Math.min((card.context_pct || 0) * 100, 100);
     if (pct > 0) {
         const contextClass = pct >= 80 ? 'context-danger' : pct >= 60 ? 'context-warning' : '';

@@ -496,7 +496,8 @@ function setupTerminalViewer() {
 
             if (!term) initXterm();
 
-            term.clear();
+            term.reset();
+            if (fitAddon) fitAddon.fit();
             if (data.output) {
                 term.write(data.output.replace(/\n/g, '\r\n'));
             } else {
@@ -511,7 +512,8 @@ function setupTerminalViewer() {
         } catch (err) {
             if (err.name === 'AbortError') return;
             if (term) {
-                term.clear();
+                term.reset();
+                if (fitAddon) fitAddon.fit();
                 term.write('Could not load terminal output. The session may no longer exist.');
             }
             showToast({ title: 'Could not load terminal output', message: 'The session may have ended or the server is unreachable', type: 'error' });
@@ -633,6 +635,16 @@ function setupTerminalViewer() {
             if (card.project_path || card.project) parts.push(card.project_path || card.project);
             if (card.session_status) parts.push(card.session_status);
             if (card.column_name) parts.push(card.column_name);
+            const ctxPct = Math.min((card.context_pct || 0) * 100, 100);
+            if (ctxPct > 0) parts.push(`${ctxPct.toFixed(0)}% ctx`);
+            if (card.cost_usd > 0) parts.push(`$${card.cost_usd.toFixed(2)}`);
+            const totalTokens = (card.input_tokens || 0) + (card.output_tokens || 0);
+            if (totalTokens > 0) {
+                const tokenLabel = totalTokens >= 1000
+                    ? `${(totalTokens / 1000).toFixed(1)}k tokens`
+                    : `${totalTokens} tokens`;
+                parts.push(tokenLabel);
+            }
             cardMetaEl.textContent = parts.join(' \u00b7 ');
         }
 
@@ -651,7 +663,7 @@ function setupTerminalViewer() {
             stopAutoRefresh();
             terminalInputArea.classList.add('hidden');
             terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
-            if (term) { term.clear(); }
+            if (term) { term.reset(); if (fitAddon) fitAddon.fit(); }
             const infoDiv = document.createElement('div');
             infoDiv.className = 'terminal-no-session';
             if (card?.description) {
