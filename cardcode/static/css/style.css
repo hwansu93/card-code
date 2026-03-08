@@ -80,25 +80,25 @@ a:focus-visible {
 [data-theme="dark"] {
     /* === Copper & Slate Palette === */
     /* Neutrals — blue-gray slate (hue 250) */
-    --bg-base:     oklch(12% 0.015 250);
-    --bg-primary:  oklch(12% 0.015 250);
-    --bg-secondary: oklch(16% 0.012 250);
-    --bg-tertiary: oklch(20% 0.010 250);
-    --bg-card:     oklch(16% 0.012 250);
-    --bg-elevated: oklch(20% 0.010 250);
-    --bg-overlay:  oklch(22% 0.010 250);
-    --bg-input:    oklch(14% 0.012 250);
-    --bg-hover:    oklch(20% 0.010 250);
+    --bg-base:     oklch(15% 0.015 250);
+    --bg-primary:  oklch(15% 0.015 250);
+    --bg-secondary: oklch(19% 0.012 250);
+    --bg-tertiary: oklch(23% 0.010 250);
+    --bg-card:     oklch(19% 0.012 250);
+    --bg-elevated: oklch(23% 0.010 250);
+    --bg-overlay:  oklch(25% 0.010 250);
+    --bg-input:    oklch(17% 0.012 250);
+    --bg-hover:    oklch(23% 0.010 250);
 
     /* Borders */
-    --border:       oklch(30% 0.012 250);
-    --border-focus: oklch(38% 0.012 250);
-    --border-subtle: oklch(25% 0.010 250);
+    --border:       oklch(33% 0.012 250);
+    --border-focus: oklch(42% 0.012 250);
+    --border-subtle: oklch(28% 0.010 250);
 
     /* Text */
-    --text-primary:   oklch(90% 0.008 250);
-    --text-secondary: oklch(62% 0.008 250);
-    --text-muted:     oklch(42% 0.008 250);
+    --text-primary:   oklch(92% 0.008 250);
+    --text-secondary: oklch(68% 0.008 250);
+    --text-muted:     oklch(50% 0.008 250);
     --text-on-accent: oklch(98% 0.004 250);
 
     /* Primary Accent — Copper (hue 55) */
@@ -123,12 +123,12 @@ a:focus-visible {
     --status-critical: oklch(62% 0.16 25);
 
     /* Terminal */
-    --terminal-bg: oklch(10% 0.012 250);
+    --terminal-bg: oklch(13% 0.012 250);
     --terminal-fg: oklch(90% 0.008 250);
     --terminal-cursor: oklch(65% 0.08 165);
 
     /* Surfaces */
-    --surface-translucent: oklch(16% 0.012 250 / 0.95);
+    --surface-translucent: oklch(19% 0.012 250 / 0.95);
     --scrim: oklch(5% 0.01 250 / 0.6);
 
     /* Misc */
@@ -1732,7 +1732,7 @@ dialog textarea {
 
 #terminal-xterm-container {
     position: absolute;
-    inset: 0;
+    inset: 4px 8px;
 }
 
 .terminal-loading,
