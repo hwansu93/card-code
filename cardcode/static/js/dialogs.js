@@ -544,7 +544,7 @@ function setupInspector() {
             if (fitAddon) fitAddon.fit();
 
             if (data.output) {
-                term.write(data.output.replace(/\n/g, '\r\n'));
+                term.write(data.output.replace(/\r?\n/g, '\r\n'));
             } else {
                 terminalArea.classList.add('empty');
             }
@@ -709,7 +709,7 @@ function setupInspector() {
             setTimeout(() => {
                 initXterm();
                 if (term) {
-                    term.write(card.last_output.replace(/\n/g, '\r\n'));
+                    term.write(card.last_output.replace(/\r?\n/g, '\r\n'));
                     term.write('\r\n\r\n--- Session has ended ---');
                 }
             }, 280);

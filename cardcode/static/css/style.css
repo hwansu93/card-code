@@ -2060,6 +2060,7 @@ dialog textarea {
 
 /* ── Command Center ── */
 .command-center {
+    position: relative;
     display: flex;
     height: calc(100vh - 44px);
     background: var(--bg-base);

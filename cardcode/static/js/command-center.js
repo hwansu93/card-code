@@ -246,13 +246,21 @@ async function loadTileOutput(tileData) {
         const resp = await fetch(`${basePath}/api/cards/${tileData.cardId}/terminal`, {
             signal: tileData.fetchController.signal,
         });
+        if (!resp.ok) {
+            // Stop refreshing on persistent errors (card deleted, etc.)
+            if (tileData.refreshInterval) {
+                clearInterval(tileData.refreshInterval);
+                tileData.refreshInterval = null;
+            }
+            return;
+        }
         const data = await resp.json();
 
         tileData.term.reset();
         if (tileData.fitAddon) tileData.fitAddon.fit();
 
         if (data.output) {
-            tileData.term.write(data.output.replace(/\n/g, '\r\n'));
+            tileData.term.write(data.output.replace(/\r?\n/g, '\r\n'));
         }
 
         if (!data.alive) {
