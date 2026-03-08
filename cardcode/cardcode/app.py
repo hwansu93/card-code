@@ -33,15 +33,17 @@ def create_app(overrides: dict | None = None) -> FastAPI:
     app.state.config = config
     app.state.ws_manager = ConnectionManager()
 
+    bp = config.base_path  # e.g. "/cardcode" or ""
+
     from cardcode.routes import router
 
-    app.include_router(router)
+    app.include_router(router, prefix=bp)
 
-    @app.get("/health")
+    @app.get(f"{bp}/health")
     async def health():
         return {"status": "ok"}
 
-    @app.websocket("/ws")
+    @app.websocket(f"{bp}/ws")
     async def websocket_endpoint(websocket: WebSocket):
         manager = app.state.ws_manager
         await manager.connect(websocket)
@@ -57,18 +59,17 @@ def create_app(overrides: dict | None = None) -> FastAPI:
         css_dir = static_dir / "css"
         js_dir = static_dir / "js"
         if css_dir.is_dir():
-            app.mount("/css", StaticFiles(directory=css_dir), name="css")
+            app.mount(f"{bp}/css", StaticFiles(directory=css_dir), name="css")
         if js_dir.is_dir():
-            app.mount("/js", StaticFiles(directory=js_dir), name="js")
+            app.mount(f"{bp}/js", StaticFiles(directory=js_dir), name="js")
         img_dir = static_dir / "img"
         if img_dir.is_dir():
-            app.mount("/img", StaticFiles(directory=img_dir), name="img")
+            app.mount(f"{bp}/img", StaticFiles(directory=img_dir), name="img")
 
         index_html = (static_dir / "index.html").read_text()
 
-        @app.get("/", response_class=HTMLResponse)
+        @app.get(f"{bp}/", response_class=HTMLResponse)
         async def index():
-            bp = config.base_path
             html = index_html.replace(
                 '<meta name="base-path" content="">',
                 f'<meta name="base-path" content="{bp}">',
