@@ -88,65 +88,44 @@
             </div>
         </main>
 
-        <aside class="inspector-panel collapsed" id="inspector-panel" role="complementary" aria-label="Inspector panel">
-            <div id="inspector-resize-handle" class="inspector-resize-handle"></div>
-
-            <!-- Card Header -->
+        <aside class="inspector-panel collapsed" id="inspector-panel">
             <div class="inspector-header">
-                <div class="inspector-header-info">
-                    <span class="inspector-card-title" id="inspector-card-title"></span>
-                    <span class="inspector-card-meta" id="inspector-card-meta"></span>
+                <div class="inspector-header-left">
+                    <span class="inspector-title" id="inspector-title">No card selected</span>
+                    <span class="inspector-meta" id="inspector-meta"></span>
                 </div>
-                <div class="inspector-header-actions">
-                    <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh terminal output">
+                <div class="inspector-header-right">
+                    <button class="inspector-btn" id="inspector-refresh" aria-label="Refresh" title="Refresh">
                         <i data-lucide="refresh-cw"></i>
                     </button>
-                    <label class="auto-refresh-toggle" title="Toggle auto-refresh">
-                        <input type="checkbox" id="terminal-auto-refresh" checked>
-                        <i data-lucide="refresh-cw" class="auto-refresh-icon"></i>
+                    <label class="auto-refresh-toggle" title="Auto-refresh">
+                        <input type="checkbox" id="inspector-auto-refresh" checked>
+                        <i data-lucide="radio"></i>
                     </label>
-                    <button class="btn-icon-sm" id="inspector-close" title="Close panel">
-                        <i data-lucide="x" width="14" height="14"></i>
+                    <button class="inspector-btn inspector-close" id="inspector-close" aria-label="Close" title="Close">
+                        <i data-lucide="x"></i>
                     </button>
                 </div>
             </div>
-
-            <!-- Tab Bar -->
-            <div class="inspector-tabs">
-                <button class="inspector-tab active" data-tab="terminal">Terminal</button>
-                <button class="inspector-tab" data-tab="detail">Details</button>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="inspector-content">
-                <!-- Terminal Tab -->
-                <div class="inspector-tab-content active" id="tab-terminal">
-                    <div class="terminal-output" id="terminal-output">
-                        <div id="terminal-xterm-container"></div>
-                    </div>
+            <div class="inspector-terminal" id="inspector-terminal">
+                <div id="terminal-xterm-container"></div>
+                <div class="terminal-loading" id="terminal-loading">
+                    <i data-lucide="loader-2" class="spin"></i>
+                    <span>Loading terminal output...</span>
                 </div>
-
-                <!-- Detail Tab -->
-                <div class="inspector-tab-content" id="tab-detail">
-                    <div class="detail-content" id="detail-content">
-                        <!-- Card details: description, prompt, handoff notes, metrics -->
-                    </div>
+                <div class="terminal-empty" id="terminal-empty">
+                    <i data-lucide="terminal"></i>
+                    <span>No active session</span>
                 </div>
             </div>
-
-            <!-- Input Area (terminal tab only) -->
-            <div class="terminal-input-area" id="terminal-input-area">
-                <input type="text" id="terminal-input" class="terminal-input" placeholder="Send a prompt to this session..." autocomplete="off">
-            </div>
-
-            <!-- Empty state (no card selected) -->
-            <div class="inspector-empty" id="inspector-empty">
-                <div class="inspector-empty-content">
-                    <i data-lucide="panel-right"></i>
-                    <p>Select a card to view details</p>
-                </div>
+            <div class="inspector-input" id="inspector-input">
+                <input type="text" id="terminal-prompt-input" placeholder="Send a message to the session..." autocomplete="off">
+                <button id="terminal-prompt-send" aria-label="Send">
+                    <i data-lucide="send"></i>
+                </button>
             </div>
         </aside>
+        <div class="inspector-scrim" id="inspector-scrim"></div>
     </div>
 
     <!-- Settings Drawer -->

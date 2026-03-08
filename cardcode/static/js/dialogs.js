@@ -8,7 +8,7 @@ export function setupDialogs() {
     setupSpawnDialog();
     setupArchiveDrawer();
     setupSettingsDrawer();
-    setupTerminalViewer();
+    setupInspector();
 }
 
 function setupCardDialog() {
@@ -385,11 +385,14 @@ function setupSettingsDrawer() {
     });
 }
 
-// ── Inspector Panel (persistent right panel with tabs) ──────────
+// ── Inspector Panel (full-height overlay) ──────────────────────
 
 let term = null;
 let fitAddon = null;
 let searchAddon = null;
+let fetchController = null;
+let autoRefreshInterval = null;
+let currentInspectorCardId = null;
 
 function getTerminalTheme() {
     const style = getComputedStyle(document.documentElement);
@@ -418,8 +421,10 @@ function getTerminalTheme() {
 }
 
 function initXterm() {
+    if (term) return;
     const container = document.getElementById('terminal-xterm-container');
-    if (!container || term) return;
+    if (!container) return;
+    container.innerHTML = '';
 
     term = new Terminal({
         cursorBlink: false,
@@ -433,242 +438,77 @@ function initXterm() {
     });
 
     fitAddon = new FitAddon.FitAddon();
-    searchAddon = new SearchAddon.SearchAddon();
-
     term.loadAddon(fitAddon);
-    term.loadAddon(new WebLinksAddon.WebLinksAddon());
-    term.loadAddon(searchAddon);
+
+    if (typeof WebLinksAddon !== 'undefined') {
+        term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    }
+    if (typeof SearchAddon !== 'undefined') {
+        searchAddon = new SearchAddon.SearchAddon();
+        term.loadAddon(searchAddon);
+    }
 
     term.open(container);
     fitAddon.fit();
 }
 
-function switchTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.inspector-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-    });
-    // Update tab content
-    document.querySelectorAll('.inspector-tab-content').forEach(pane => {
-        pane.classList.toggle('active', pane.id === `tab-${tabName}`);
-    });
-    // Show/hide terminal input area based on tab
-    const inputArea = document.getElementById('terminal-input-area');
-    if (inputArea && !inputArea.classList.contains('hidden')) {
-        inputArea.style.display = tabName === 'terminal' ? '' : 'none';
-    }
-    // Refit terminal when switching to terminal tab
-    if (tabName === 'terminal' && fitAddon && term) {
-        requestAnimationFrame(() => fitAddon.fit());
+function disposeXterm() {
+    if (term) {
+        term.dispose();
+        term = null;
+        fitAddon = null;
+        searchAddon = null;
     }
 }
 
-function populateDetailTab(card) {
-    const detailContent = document.getElementById('detail-content');
-    if (!detailContent || !card) return;
-
-    let html = '';
-
-    // Metrics grid
-    const costUsd = (card.cost_usd || 0).toFixed(2);
-    const ctxPct = Math.min((card.context_pct || 0) * 100, 100).toFixed(0);
-    const inputTokens = card.input_tokens || 0;
-    const outputTokens = card.output_tokens || 0;
-
-    html += '<div class="detail-metrics">';
-    html += `<div class="metric-item"><div class="metric-value">$${escapeHtml(costUsd)}</div><div class="metric-label">Cost</div></div>`;
-    html += `<div class="metric-item"><div class="metric-value">${escapeHtml(ctxPct)}%</div><div class="metric-label">Context</div></div>`;
-    html += `<div class="metric-item"><div class="metric-value">${formatTokens(inputTokens)}</div><div class="metric-label">Input Tokens</div></div>`;
-    html += `<div class="metric-item"><div class="metric-value">${formatTokens(outputTokens)}</div><div class="metric-label">Output Tokens</div></div>`;
-    html += '</div>';
-
-    // Description
-    if (card.description) {
-        html += '<div class="detail-section"><h4>Description</h4>';
-        html += `<p>${escapeHtml(card.description)}</p></div>`;
-    }
-
-    // Initial Prompt
-    if (card.initial_prompt) {
-        html += '<div class="detail-section"><h4>Initial Prompt</h4>';
-        html += `<p>${escapeHtml(card.initial_prompt)}</p></div>`;
-    }
-
-    // Handoff Notes
-    if (card.handoff_notes) {
-        html += '<div class="detail-section"><h4>Handoff Notes</h4>';
-        html += `<p>${escapeHtml(card.handoff_notes)}</p></div>`;
-    }
-
-    // Metadata
-    const metaParts = [];
-    if (card.project_path || card.project) metaParts.push(`<strong>Project:</strong> ${escapeHtml(card.project_path || card.project)}`);
-    if (card.session_status) metaParts.push(`<strong>Status:</strong> ${escapeHtml(card.session_status)}`);
-    if (card.column_name) metaParts.push(`<strong>Column:</strong> ${escapeHtml(card.column_name)}`);
-    if (card.created_at) metaParts.push(`<strong>Created:</strong> ${new Date(card.created_at).toLocaleString()}`);
-
-    if (metaParts.length > 0) {
-        html += '<div class="detail-section"><h4>Info</h4>';
-        html += metaParts.map(p => `<p>${p}</p>`).join('');
-        html += '</div>';
-    }
-
-    if (!html) {
-        html = '<p>No details available for this card.</p>';
-    }
-
-    detailContent.innerHTML = html;
-}
-
-function formatTokens(count) {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
-    return String(count);
-}
-
-function setupTerminalViewer() {
+function setupInspector() {
     const panel = document.getElementById('inspector-panel');
-    const emptyState = document.getElementById('inspector-empty');
-    const refreshBtn = document.getElementById('terminal-refresh');
-    const autoRefreshCheck = document.getElementById('terminal-auto-refresh');
-    const titleEl = document.getElementById('inspector-card-title');
+    const scrim = document.getElementById('inspector-scrim');
+    const closeBtn = document.getElementById('inspector-close');
+    const refreshBtn = document.getElementById('inspector-refresh');
+    const autoRefreshCheckbox = document.getElementById('inspector-auto-refresh');
+    const promptInput = document.getElementById('terminal-prompt-input');
+    const promptSend = document.getElementById('terminal-prompt-send');
     const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
 
-    let currentCardId = null;
-    let autoRefreshInterval = null;
-    let fetchController = null;
+    // Restore auto-refresh preference
+    const savedAutoRefresh = localStorage.getItem('cardcode-auto-refresh');
+    if (savedAutoRefresh !== null) {
+        autoRefreshCheckbox.checked = savedAutoRefresh === 'true';
+    }
+
+    closeBtn.addEventListener('click', () => closeInspector());
+    scrim.addEventListener('click', () => closeInspector());
 
     refreshBtn.addEventListener('click', () => {
-        if (currentCardId) loadTerminalOutput(currentCardId);
+        if (currentInspectorCardId) loadTerminalOutput(currentInspectorCardId);
     });
 
-    autoRefreshCheck.addEventListener('change', () => {
-        if (autoRefreshCheck.checked && currentCardId) {
-            startAutoRefresh();
+    autoRefreshCheckbox.addEventListener('change', () => {
+        localStorage.setItem('cardcode-auto-refresh', autoRefreshCheckbox.checked);
+        if (autoRefreshCheckbox.checked && currentInspectorCardId) {
+            startAutoRefresh(currentInspectorCardId);
         } else {
             stopAutoRefresh();
         }
     });
 
-    // Tab switching
-    document.querySelectorAll('.inspector-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            switchTab(btn.dataset.tab);
-        });
-    });
-
-    function stopAutoRefresh() {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-            autoRefreshInterval = null;
-        }
-    }
-
-    function startAutoRefresh() {
-        stopAutoRefresh();
-        autoRefreshInterval = setInterval(() => {
-            if (currentCardId) loadTerminalOutput(currentCardId);
-        }, 3000);
-    }
-
-    function hideEmptyState() {
-        emptyState.classList.add('hidden');
-    }
-
-    async function loadTerminalOutput(cardId) {
-        if (fetchController) fetchController.abort();
-        fetchController = new AbortController();
-        try {
-            const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`, { signal: fetchController.signal });
-            const data = await resp.json();
-
-            if (!term) initXterm();
-
-            term.reset();
-            if (fitAddon) fitAddon.fit();
-            if (data.output) {
-                term.write(data.output.replace(/\n/g, '\r\n'));
-            } else {
-                term.write('No output yet. The session may still be starting.');
-            }
-
-            if (!data.alive) {
-                term.write('\r\n\r\n--- Session has ended ---');
-                stopAutoRefresh();
-            }
-        } catch (err) {
-            if (err.name === 'AbortError') return;
-            if (term) {
-                term.reset();
-                if (fitAddon) fitAddon.fit();
-                term.write('Could not load terminal output. The session may no longer exist.');
-            }
-            showToast({ title: 'Could not load terminal output', message: 'The session may have ended or the server is unreachable', type: 'error' });
-        }
-    }
-
-    // Terminal input handler
-    const terminalInput = document.getElementById('terminal-input');
-    const terminalInputArea = document.getElementById('terminal-input-area');
-
-    terminalInput.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter' && terminalInput.value.trim()) {
+    promptInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && promptInput.value.trim()) {
             e.preventDefault();
-            const text = terminalInput.value.trim();
-            terminalInput.value = '';
-            terminalInput.disabled = true;
-            try {
-                await fetch(`${basePath}/api/cards/${currentCardId}/prompt`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text }),
-                });
-                setTimeout(() => {
-                    if (currentCardId) loadTerminalOutput(currentCardId);
-                }, 500);
-            } catch (err) {
-                console.error('Prompt send failed:', err);
-            } finally {
-                terminalInput.disabled = false;
-                terminalInput.focus();
-            }
+            sendPrompt(promptInput.value.trim());
         }
     });
 
-    // Resize handle
-    setupResizeHandle();
-
-    // Close button
-    document.getElementById('inspector-close')?.addEventListener('click', () => {
-        panel.classList.add('collapsed');
-    });
-
-    // Ctrl+F search in terminal
-    let searchVisible = false;
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.className = 'terminal-search-input';
-    searchInput.placeholder = 'Search terminal output...';
-    searchInput.style.display = 'none';
-    document.querySelector('.inspector-header-actions')?.appendChild(searchInput);
-
-    searchInput.addEventListener('input', () => {
-        if (searchAddon && searchInput.value) searchAddon.findNext(searchInput.value);
-    });
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') searchAddon?.findNext(searchInput.value);
-        if (e.key === 'Escape') {
-            searchInput.style.display = 'none';
-            searchVisible = false;
+    promptSend.addEventListener('click', () => {
+        if (promptInput.value.trim()) {
+            sendPrompt(promptInput.value.trim());
         }
     });
 
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f' && term && panel.offsetWidth > 0) {
-            e.preventDefault();
-            searchVisible = !searchVisible;
-            searchInput.style.display = searchVisible ? 'block' : 'none';
-            if (searchVisible) searchInput.focus();
+        if (e.key === 'Escape' && panel.classList.contains('open')) {
+            closeInspector();
         }
     });
 
@@ -683,126 +523,187 @@ function setupTerminalViewer() {
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-    // Expose globally for card click handler
-    const cardMetaEl = document.getElementById('inspector-card-meta');
-    const terminalOutput = document.getElementById('terminal-output');
+    // --- Inner functions ---
 
-    CardCode.openTerminalViewer = async (cardId, cardTitle) => {
+    async function loadTerminalOutput(cardId) {
+        if (fetchController) fetchController.abort();
+        fetchController = new AbortController();
+
+        const terminalArea = document.getElementById('inspector-terminal');
+        const inputBar = document.getElementById('inspector-input');
+
+        try {
+            const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`, { signal: fetchController.signal });
+            const data = await resp.json();
+
+            terminalArea.classList.remove('loading', 'empty');
+
+            if (!term) initXterm();
+            term.reset();
+            if (fitAddon) fitAddon.fit();
+
+            if (data.output) {
+                term.write(data.output.replace(/\n/g, '\r\n'));
+            } else {
+                terminalArea.classList.add('empty');
+            }
+
+            if (!data.alive) {
+                if (data.output) {
+                    term.write('\r\n\r\n--- Session has ended ---');
+                }
+                stopAutoRefresh();
+                inputBar.classList.add('hidden');
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.error('Failed to load terminal output:', err);
+            terminalArea.classList.remove('loading');
+            terminalArea.classList.add('empty');
+        }
+    }
+
+    async function sendPrompt(text) {
+        promptInput.disabled = true;
+        promptSend.disabled = true;
+        try {
+            await fetch(`${basePath}/api/cards/${currentInspectorCardId}/prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+            promptInput.value = '';
+            setTimeout(() => {
+                if (currentInspectorCardId) loadTerminalOutput(currentInspectorCardId);
+            }, 500);
+        } catch (err) {
+            console.error('Prompt send failed:', err);
+            showToast({ title: 'Failed to send prompt', type: 'error' });
+        } finally {
+            promptInput.disabled = false;
+            promptSend.disabled = false;
+            promptInput.focus();
+        }
+    }
+
+    function startAutoRefresh(cardId) {
+        stopAutoRefresh();
+        autoRefreshInterval = setInterval(() => {
+            if (currentInspectorCardId === cardId) {
+                loadTerminalOutput(cardId);
+            }
+        }, 3000);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    }
+
+    function closeInspector() {
+        panel.classList.remove('open');
+        scrim.classList.remove('visible');
+        stopAutoRefresh();
+        if (fetchController) fetchController.abort();
+
+        // Deselect card on board
+        if (currentInspectorCardId) {
+            const prev = document.querySelector(`[data-card-id="${currentInspectorCardId}"]`);
+            if (prev) prev.classList.remove('selected');
+        }
+        currentInspectorCardId = null;
+
+        setTimeout(() => {
+            disposeXterm();
+            panel.classList.add('collapsed');
+        }, 280);
+    }
+
+    // Expose globally for card click handler
+    CardCode.openTerminalViewer = (cardId, cardTitle) => {
+        openInspector(cardId, cardTitle, { loadTerminalOutput, startAutoRefresh, stopAutoRefresh });
+    };
+
+    function openInspector(cardId, cardTitle, helpers) {
         // Deselect previous card
-        if (currentCardId) {
-            const prev = document.querySelector(`[data-card-id="${currentCardId}"]`);
+        if (currentInspectorCardId) {
+            const prev = document.querySelector(`[data-card-id="${currentInspectorCardId}"]`);
             if (prev) prev.classList.remove('selected');
         }
 
-        currentCardId = cardId;
+        currentInspectorCardId = cardId;
         state.selectedCardId = cardId;
+
+        // Update header
+        const titleEl = document.getElementById('inspector-title');
         titleEl.textContent = cardTitle || 'Session';
 
-        // Show the inspector panel
-        panel.classList.remove('collapsed');
+        // Find card data
+        const card = state.cards.find(c => c.id === cardId);
 
-        // Highlight selected card
+        // Build meta HTML
+        const metaEl = document.getElementById('inspector-meta');
+        if (metaEl && card) {
+            const parts = [];
+            if (card.model) {
+                parts.push(`<span class="model-chip">${escapeHtml(card.model)}</span>`);
+            }
+            if (card.session_status) {
+                if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
+                parts.push(`<span>${escapeHtml(card.session_status)}</span>`);
+            }
+            if (card.cost_usd > 0) {
+                if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
+                parts.push(`<span>$${card.cost_usd.toFixed(2)}</span>`);
+            }
+            metaEl.innerHTML = parts.join(' ');
+        }
+
+        // Highlight selected card on board
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
         if (cardEl) cardEl.classList.add('selected');
 
-        // Mobile bottom sheet
-        if (window.innerWidth < 768) {
-            panel.classList.add('mobile-open');
-        }
+        // Show panel and scrim
+        panel.classList.remove('collapsed');
+        panel.classList.add('open');
+        scrim.classList.add('visible');
 
-        hideEmptyState();
-
-        // Get card data for metadata
-        const card = state.cards.find(c => c.id === cardId);
-        const hasSession = card && (card.tmux_session || card.is_external);
-
-        // Populate metadata line
-        if (cardMetaEl && card) {
-            const parts = [];
-            if (card.project_path || card.project) parts.push(card.project_path || card.project);
-            if (card.session_status) parts.push(card.session_status);
-            if (card.column_name) parts.push(card.column_name);
-            const ctxPct = Math.min((card.context_pct || 0) * 100, 100);
-            if (ctxPct > 0) parts.push(`${ctxPct.toFixed(0)}% ctx`);
-            if (card.cost_usd > 0) parts.push(`$${card.cost_usd.toFixed(2)}`);
-            const totalTokens = (card.input_tokens || 0) + (card.output_tokens || 0);
-            if (totalTokens > 0) {
-                const tokenLabel = totalTokens >= 1000
-                    ? `${(totalTokens / 1000).toFixed(1)}k tokens`
-                    : `${totalTokens} tokens`;
-                parts.push(tokenLabel);
-            }
-            cardMetaEl.textContent = parts.join(' \u00b7 ');
-        }
-
-        // Populate the detail tab
-        if (card) populateDetailTab(card);
+        const terminalArea = document.getElementById('inspector-terminal');
+        const inputBar = document.getElementById('inspector-input');
+        const hasSession = card && (card.tmux_session || card.session_status === 'alive' || card.session_status === 'waiting');
 
         if (hasSession) {
-            // Auto-switch to terminal tab for cards with sessions
-            switchTab('terminal');
-            terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
-            await loadTerminalOutput(cardId);
-            if (card && card.is_external) {
-                terminalInputArea.classList.add('hidden');
-            } else {
-                terminalInputArea.classList.remove('hidden');
-            }
-            terminalInputArea.style.display = '';
-            if (autoRefreshCheck.checked) startAutoRefresh();
-        } else {
-            // No session — auto-switch to detail tab
-            switchTab('detail');
-            stopAutoRefresh();
-            terminalInputArea.classList.add('hidden');
-            terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
-            if (term) { term.reset(); if (fitAddon) fitAddon.fit(); }
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'terminal-no-session';
-            if (!card?.description && !card?.initial_prompt) {
-                infoDiv.innerHTML = '<p>No active session. Click "Spawn session" from the card menu to start one.</p>';
-            }
-            terminalOutput.appendChild(infoDiv);
-        }
+            inputBar.classList.remove('hidden');
+            terminalArea.classList.remove('empty');
+            terminalArea.classList.add('loading');
 
-        // Refit after panel becomes visible
-        if (fitAddon && term) {
-            requestAnimationFrame(() => fitAddon.fit());
+            setTimeout(() => {
+                initXterm();
+                helpers.loadTerminalOutput(cardId);
+            }, 280);
+
+            if (autoRefreshCheckbox.checked) {
+                helpers.startAutoRefresh(cardId);
+            }
+        } else if (card && card.last_output) {
+            inputBar.classList.add('hidden');
+            terminalArea.classList.remove('loading', 'empty');
+            setTimeout(() => {
+                initXterm();
+                if (term) {
+                    term.write(card.last_output.replace(/\n/g, '\r\n'));
+                    term.write('\r\n\r\n--- Session has ended ---');
+                }
+            }, 280);
+        } else {
+            inputBar.classList.add('hidden');
+            terminalArea.classList.remove('loading');
+            terminalArea.classList.add('empty');
         }
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
-    };
-}
-
-function setupResizeHandle() {
-    const handle = document.getElementById('inspector-resize-handle');
-    const panel = document.getElementById('inspector-panel');
-    if (!handle || !panel) return;
-
-    let startX, startWidth;
-
-    handle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        startX = e.clientX;
-        startWidth = panel.offsetWidth;
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-    });
-
-    function onMouseMove(e) {
-        const delta = startX - e.clientX;
-        const newWidth = Math.max(400, Math.min(900, startWidth + delta));
-        panel.style.width = newWidth + 'px';
-        if (fitAddon) fitAddon.fit();
-    }
-
-    function onMouseUp() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
     }
 }
 
