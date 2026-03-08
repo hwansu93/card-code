@@ -916,7 +916,9 @@ a:focus-visible {
 }
 
 .card-context-menu-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: 100%;
     padding: 6px 10px;
     font-size: 12px;
@@ -934,6 +936,24 @@ a:focus-visible {
 .card-context-menu-item:focus-visible {
     background: var(--bg-tertiary);
     outline: none;
+}
+
+.card-context-menu-item svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.card-context-menu-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 3px 0;
+}
+
+.card-context-menu-move {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 /* Done card muted styles */
@@ -1651,17 +1671,58 @@ dialog textarea {
     flex-shrink: 0;
 }
 
-.auto-refresh-label {
+.auto-refresh-toggle {
     display: flex;
     align-items: center;
     gap: 3px;
-    font-size: 10px;
-    color: var(--text-muted);
     cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    transition: color var(--transition);
 }
 
-.auto-refresh-label input[type="checkbox"] {
-    accent-color: var(--accent);
+.auto-refresh-toggle:hover {
+    color: var(--text-primary);
+}
+
+.auto-refresh-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.auto-refresh-toggle .auto-refresh-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.auto-refresh-toggle input:checked ~ .auto-refresh-icon {
+    color: var(--accent);
+}
+
+.terminal-card-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.terminal-no-session {
+    padding: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.terminal-no-session h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.terminal-no-session p {
+    margin: 0 0 8px;
 }
 
 .terminal-output {

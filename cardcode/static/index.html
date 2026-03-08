@@ -94,6 +94,7 @@
                 <div class="terminal-header-info">
                     <h3><i data-lucide="terminal"></i> <span id="terminal-card-title">Terminal</span></h3>
                     <span class="terminal-session-name" id="terminal-session-name"></span>
+                    <span class="terminal-card-meta" id="terminal-card-meta"></span>
                 </div>
                 <div class="terminal-panel-actions">
                     <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh terminal output">
@@ -102,8 +103,9 @@
                     <button id="terminal-close" class="btn-icon-sm" title="Close terminal panel">
                         <i data-lucide="x"></i>
                     </button>
-                    <label class="auto-refresh-label">
-                        <input type="checkbox" id="terminal-auto-refresh" checked> Auto-refresh
+                    <label class="auto-refresh-toggle" title="Toggle auto-refresh">
+                        <input type="checkbox" id="terminal-auto-refresh" checked>
+                        <i data-lucide="refresh-cw" class="auto-refresh-icon"></i>
                     </label>
                 </div>
             </div>

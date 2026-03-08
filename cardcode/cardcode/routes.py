@@ -120,7 +120,7 @@ async def update_card(request: Request, card_id: str, body: CardUpdate) -> Card:
 
 
 @router.patch("/cards/{card_id}/move")
-async def move_card(request: Request, card_id: str, body: CardMove) -> Card:
+async def move_card(request: Request, card_id: str, body: CardMove) -> dict:
     db = await get_db(request.app.state.config.db_path)
     try:
         await _get_card_or_404(db, card_id)
@@ -144,7 +144,18 @@ async def move_card(request: Request, card_id: str, body: CardMove) -> Card:
         await request.app.state.ws_manager.broadcast(
             {"type": "card_moved", "id": card_id, "column": body.column_name, "position": body.position}
         )
-        return card
+
+        # Build suggestion based on target column and card state
+        suggestion = None
+        if body.column_name == "active" and not card.tmux_session:
+            suggestion = "spawn"
+        elif body.column_name == "done" and card.tmux_session and card.session_status != "dead":
+            suggestion = "stop_session"
+
+        result = card.model_dump()
+        if suggestion:
+            result["suggestion"] = suggestion
+        return result
     finally:
         await db.close()
 
@@ -254,18 +265,32 @@ async def stop_session(request: Request, card_id: str) -> Card:
         row = await _get_card_or_404(db, card_id)
         card = Card(**row)
 
+        last_output = None
         if card.tmux_session:
             tmux = TmuxManager(request.app.state.config.tmux_socket)
+            # Capture last output before killing the session
+            try:
+                captured = tmux.capture_pane(card.tmux_session, lines=100)
+                if isinstance(captured, str) and captured.strip():
+                    last_output = captured
+            except Exception:
+                pass
             try:
                 tmux.kill_session(card.tmux_session)
             except Exception:
                 pass
 
         now = _now()
-        await db.execute(
-            "UPDATE cards SET session_status = 'dead', updated_at = ? WHERE id = ?",
-            (now, card_id),
-        )
+        if last_output:
+            await db.execute(
+                "UPDATE cards SET session_status = 'dead', last_output = ?, updated_at = ? WHERE id = ?",
+                (last_output, now, card_id),
+            )
+        else:
+            await db.execute(
+                "UPDATE cards SET session_status = 'dead', updated_at = ? WHERE id = ?",
+                (now, card_id),
+            )
         await db.commit()
 
         row = await _get_card_or_404(db, card_id)
@@ -287,19 +312,25 @@ async def get_terminal_output(request: Request, card_id: str) -> dict:
         card = Card(**row)
 
         if card.is_external:
+            fallback = card.last_output or "No terminal output available for this session"
             return {
-                "output": "Terminal view not available for external sessions",
+                "output": fallback,
                 "session": None,
                 "alive": False,
                 "is_external": True,
             }
 
         if not card.tmux_session:
-            return {"output": "", "session": None, "alive": False}
+            fallback = card.last_output or ""
+            return {"output": fallback, "session": None, "alive": False}
 
         tmux = TmuxManager(request.app.state.config.tmux_socket)
         alive = tmux.is_session_alive(card.tmux_session)
         output = tmux.capture_pane(card.tmux_session, lines=100) if alive else ""
+
+        # Fall back to stored last_output when live capture fails
+        if not output.strip() and card.last_output:
+            output = card.last_output
 
         return {
             "output": output,
@@ -435,6 +466,16 @@ async def list_archived(request: Request) -> list[Card]:
         )
         rows = await cursor.fetchall()
         return [Card(**dict(row)) for row in rows]
+    finally:
+        await db.close()
+
+
+@router.get("/cards/{card_id}")
+async def get_card(request: Request, card_id: str) -> Card:
+    db = await get_db(request.app.state.config.db_path)
+    try:
+        row = await _get_card_or_404(db, card_id)
+        return Card(**row)
     finally:
         await db.close()
 

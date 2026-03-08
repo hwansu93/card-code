@@ -79,6 +79,7 @@ class Card(BaseModel):
     context_pct: float = 0.0
     initial_prompt: str | None = None
     handoff_notes: str | None = None
+    last_output: str | None = None
     manual_overrides: str = "{}"
     is_launching: int = 0
     is_external: int = 0

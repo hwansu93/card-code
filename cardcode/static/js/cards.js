@@ -1,6 +1,6 @@
 import { state, apiPatch, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, showConfirmDialog } from './utils.js';
 import { showToast } from './notifications.js';
 
 export function createCardElement(card) {
@@ -58,14 +58,16 @@ export function createCardElement(card) {
 
     el.innerHTML = html;
 
-    // Card click handler — open terminal for session cards
-    const hasTerminal = card.tmux_session || card.is_external;
-    if (hasTerminal) {
-        el.addEventListener('click', (e) => {
-            if (e.defaultPrevented) return;
+    // Card click handler — terminal for session cards, edit for others
+    el.addEventListener('click', (e) => {
+        if (e.defaultPrevented) return;
+        const hasTerminal = card.tmux_session || card.is_external;
+        if (hasTerminal) {
             CardCode.openTerminalViewer?.(card.id, card.title);
-        });
-    }
+        } else {
+            CardCode.openCardDialog?.(card.id);
+        }
+    });
 
     // Right-click context menu
     el.addEventListener('contextmenu', (e) => {
@@ -99,20 +101,22 @@ function showCardContextMenu(e, card) {
     menu.style.top = `${e.clientY}px`;
 
     const hasTerminal = card.tmux_session || card.is_external;
+    const hasSession = !!card.tmux_session;
 
     const items = [
-        { label: 'Edit card', action: 'edit' },
-        { label: 'Move to next column', action: 'move-next' },
-        ...(hasTerminal ? [{ label: 'View terminal output', action: 'open-terminal' }] : []),
-        { label: 'Archive card', action: 'archive' },
+        { label: 'Edit card', icon: 'pencil', action: 'edit' },
+        ...(!hasSession ? [{ label: 'Spawn session', icon: 'play', action: 'spawn' }] : []),
+        ...(hasTerminal ? [{ label: 'View terminal output', icon: 'terminal', action: 'open-terminal' }] : []),
+        { label: 'Archive card', icon: 'archive', action: 'archive' },
     ];
 
+    // Static items
     items.forEach(item => {
         const el = document.createElement('button');
         el.type = 'button';
         el.className = 'card-context-menu-item';
         el.setAttribute('role', 'menuitem');
-        el.textContent = item.label;
+        el.innerHTML = `<i data-lucide="${item.icon}"></i> ${escapeHtml(item.label)}`;
         el.addEventListener('click', (ev) => {
             ev.stopPropagation();
             dismissContextMenu();
@@ -121,7 +125,34 @@ function showCardContextMenu(e, card) {
         menu.appendChild(el);
     });
 
+    // "Move to..." submenu
+    const colNames = (state.columns || []).map(c => c.name);
+    if (colNames.length > 1) {
+        const separator = document.createElement('div');
+        separator.className = 'card-context-menu-separator';
+        menu.appendChild(separator);
+
+        colNames.forEach(colName => {
+            if (colName === card.column_name) return;
+            const el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'card-context-menu-item card-context-menu-move';
+            el.setAttribute('role', 'menuitem');
+            const displayName = colName.charAt(0).toUpperCase() + colName.slice(1);
+            el.innerHTML = `<i data-lucide="arrow-right"></i> ${escapeHtml(displayName)}`;
+            el.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                dismissContextMenu();
+                handleQuickAction('move-to', card, colName);
+            });
+            menu.appendChild(el);
+        });
+    }
+
     document.body.appendChild(menu);
+
+    // Render lucide icons in the menu
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: menu });
 
     // Reposition if overflowing viewport
     const rect = menu.getBoundingClientRect();
@@ -163,10 +194,13 @@ function dismissContextMenu() {
     if (existing) existing.remove();
 }
 
-async function handleQuickAction(action, card) {
+async function handleQuickAction(action, card, targetColumn) {
     try {
         if (action === 'edit') {
             CardCode.openCardDialog?.(card.id);
+            return;
+        } else if (action === 'spawn') {
+            CardCode.openSpawnDialog?.(card.id);
             return;
         } else if (action === 'archive') {
             await apiPatch(`/cards/${card.id}/move`, {
@@ -177,19 +211,16 @@ async function handleQuickAction(action, card) {
             renderBoard(state.cards);
             updateColumnCounts();
             updateEmptyState();
-        } else if (action === 'move-next') {
-            const colNames = (state.columns || []).map(c => c.name);
-            const curIdx = colNames.indexOf(card.column_name);
-            if (curIdx === -1 || curIdx >= colNames.length - 1) return;
-            const nextCol = colNames[curIdx + 1];
-            await apiPatch(`/cards/${card.id}/move`, {
-                column_name: nextCol,
+        } else if (action === 'move-to') {
+            const response = await apiPatch(`/cards/${card.id}/move`, {
+                column_name: targetColumn,
                 position: Date.now(),
             });
-            card.column_name = nextCol;
+            card.column_name = targetColumn;
             renderBoard(state.cards);
             updateColumnCounts();
             updateEmptyState();
+            await handleMoveSuggestion(response, card);
         } else if (action === 'open-terminal') {
             CardCode.openTerminalViewer?.(card.id, card.title);
         }
@@ -197,8 +228,42 @@ async function handleQuickAction(action, card) {
         console.error(`Quick action "${action}" failed:`, err);
         if (action === 'archive') {
             showToast({ title: `Failed to archive "${card.title}"`, message: 'Check your connection and try again', type: 'error' });
-        } else if (action === 'move-next') {
+        } else if (action === 'move-to') {
             showToast({ title: `Failed to move "${card.title}"`, message: 'Check your connection and try again', type: 'error' });
+        }
+    }
+}
+
+export async function handleMoveSuggestion(response, card) {
+    if (!response?.suggestion) return;
+
+    if (response.suggestion === 'spawn') {
+        const confirmed = await showConfirmDialog({
+            title: 'Spawn a session?',
+            message: 'This card has no active session. Spawn one now?',
+            confirmText: 'Spawn Session',
+        });
+        if (confirmed) {
+            CardCode.openSpawnDialog?.(card.id);
+        }
+    } else if (response.suggestion === 'stop_session') {
+        const confirmed = await showConfirmDialog({
+            title: 'Stop session?',
+            message: 'Stop the active session for this card?',
+            confirmText: 'Stop Session',
+            danger: true,
+        });
+        if (confirmed) {
+            try {
+                await apiPost(`/cards/${card.id}/stop`);
+                const { apiGet } = await import('./app.js');
+                state.cards = await apiGet('/cards');
+                renderBoard(state.cards);
+                updateColumnCounts();
+            } catch (err) {
+                console.error('Stop session failed:', err);
+                showToast({ title: 'Failed to stop session', message: 'Check your connection and try again', type: 'error' });
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-import { createCardElement } from './cards.js';
+import { createCardElement, handleMoveSuggestion } from './cards.js';
 import { apiPatch, apiPost, apiDelete, apiGet } from './app.js';
 import { state } from './app.js';
 import { showToast } from './notifications.js';
@@ -399,7 +399,7 @@ export function setupSortable() {
                 }
 
                 try {
-                    await apiPatch(`/cards/${cardId}/move`, {
+                    const response = await apiPatch(`/cards/${cardId}/move`, {
                         column_name: newColumn,
                         position: position,
                     });
@@ -417,6 +417,10 @@ export function setupSortable() {
                         ph.className = 'column-empty';
                         ph.textContent = 'No cards — drag or create one';
                         evt.from.appendChild(ph);
+                    }
+                    // Handle move suggestion (spawn/stop)
+                    if (card) {
+                        await handleMoveSuggestion(response, card);
                     }
                 } catch (err) {
                     console.error('Move failed:', err);

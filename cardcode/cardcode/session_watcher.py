@@ -125,9 +125,9 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
     """Single poll iteration."""
     db = await get_db(config.db_path)
     try:
-        # Get all active cards with sessions
+        # Get all cards with live sessions, regardless of column
         cursor = await db.execute(
-            "SELECT * FROM cards WHERE column_name = 'active' AND tmux_session IS NOT NULL"
+            "SELECT * FROM cards WHERE tmux_session IS NOT NULL AND session_status != 'dead'"
         )
         active_cards = [dict(row) for row in await cursor.fetchall()]
 
@@ -148,6 +148,15 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
             updates = {"session_status": new_status}
             updates.update(metrics)
             updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+            # Store last output when session is alive, or capture final output on death
+            if pane_text.strip():
+                updates["last_output"] = pane_text
+            elif new_status == "dead" and old_status != "dead":
+                # Session just died - try to capture any remaining output
+                last_chance = tmux.capture_pane(session_name, lines=100)
+                if last_chance.strip():
+                    updates["last_output"] = last_chance
 
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             values = list(updates.values()) + [card["id"]]

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS cards (
     context_pct REAL DEFAULT 0,
     initial_prompt TEXT,
     handoff_notes TEXT,
+    last_output TEXT,
     manual_overrides TEXT DEFAULT '{}',
     is_launching INTEGER DEFAULT 0,
     is_external INTEGER DEFAULT 0,
@@ -81,6 +82,12 @@ async def init_db(db_path: Path) -> None:
                     "INSERT INTO columns (id, name, position) VALUES (?, ?, ?)",
                     (generate_ksuid(), name, position),
                 )
+        # Migrate: add last_output column if missing
+        try:
+            await db.execute("ALTER TABLE cards ADD COLUMN last_output TEXT")
+        except Exception:
+            pass  # Column already exists
+
         await db.commit()
 
 

@@ -595,6 +595,9 @@ function setupTerminalViewer() {
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     // Expose globally for card click handler
+    const cardMetaEl = document.getElementById('terminal-card-meta');
+    const terminalOutput = document.getElementById('terminal-output');
+
     CardCode.openTerminalViewer = async (cardId, cardTitle) => {
         // Deselect previous card
         if (currentCardId) {
@@ -619,22 +622,55 @@ function setupTerminalViewer() {
         }
 
         hideEmptyState();
-        await loadTerminalOutput(cardId);
+
+        // Get card data for metadata
+        const card = state.cards.find(c => c.id === cardId);
+        const hasSession = card && (card.tmux_session || card.is_external);
+
+        // Populate metadata line
+        if (cardMetaEl && card) {
+            const parts = [];
+            if (card.project_path || card.project) parts.push(card.project_path || card.project);
+            if (card.session_status) parts.push(card.session_status);
+            if (card.column_name) parts.push(card.column_name);
+            cardMetaEl.textContent = parts.join(' \u00b7 ');
+        }
+
+        if (hasSession) {
+            // Show terminal, hide any no-session info
+            terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
+            await loadTerminalOutput(cardId);
+            if (card && card.is_external) {
+                terminalInputArea.classList.add('hidden');
+            } else {
+                terminalInputArea.classList.remove('hidden');
+            }
+            if (autoRefreshCheck.checked) startAutoRefresh();
+        } else {
+            // No session — show card description/prompt instead of terminal
+            stopAutoRefresh();
+            terminalInputArea.classList.add('hidden');
+            terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
+            if (term) { term.clear(); }
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'terminal-no-session';
+            if (card?.description) {
+                infoDiv.innerHTML = `<h4>Description</h4><p>${escapeHtml(card.description)}</p>`;
+            }
+            if (card?.initial_prompt) {
+                infoDiv.innerHTML += `<h4>Initial Prompt</h4><p>${escapeHtml(card.initial_prompt)}</p>`;
+            }
+            if (!card?.description && !card?.initial_prompt) {
+                infoDiv.innerHTML = '<p>No active session. Click "Spawn session" from the card menu to start one.</p>';
+            }
+            terminalOutput.appendChild(infoDiv);
+        }
 
         // Refit after panel becomes visible
         if (fitAddon && term) {
             requestAnimationFrame(() => fitAddon.fit());
         }
 
-        // Show/hide input based on whether it's an external session
-        const card = (await import('./app.js')).state.cards.find(c => c.id === cardId);
-        if (card && card.is_external) {
-            terminalInputArea.classList.add('hidden');
-        } else {
-            terminalInputArea.classList.remove('hidden');
-        }
-
-        if (autoRefreshCheck.checked) startAutoRefresh();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
 }
