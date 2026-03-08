@@ -387,6 +387,24 @@ function setupSettingsDrawer() {
 
 // ── Inspector Panel (full-height overlay) ──────────────────────
 
+function updateInspectorMeta(card) {
+    const metaEl = document.getElementById('inspector-meta');
+    if (!metaEl || !card) return;
+    const parts = [];
+    if (card.model) {
+        parts.push(`<span class="model-chip">${escapeHtml(card.model)}</span>`);
+    }
+    if (card.session_status) {
+        if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
+        parts.push(`<span>${escapeHtml(card.session_status)}</span>`);
+    }
+    if (card.cost_usd > 0) {
+        if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
+        parts.push(`<span>$${card.cost_usd.toFixed(2)}</span>`);
+    }
+    metaEl.innerHTML = parts.join(' ');
+}
+
 let term = null;
 let fitAddon = null;
 let searchAddon = null;
@@ -524,6 +542,14 @@ function setupInspector() {
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
+    // Live-update inspector header when card data changes via WebSocket
+    window.addEventListener('cardcode:card-updated', (e) => {
+        if (currentInspectorCardId && currentInspectorCardId === e.detail.cardId) {
+            const card = state.cards.find(c => c.id === e.detail.cardId);
+            if (card) updateInspectorMeta(card);
+        }
+    });
+
     // --- Inner functions ---
 
     async function loadTerminalOutput(cardId) {
@@ -660,22 +686,7 @@ function setupInspector() {
         const card = state.cards.find(c => c.id === cardId);
 
         // Build meta HTML
-        const metaEl = document.getElementById('inspector-meta');
-        if (metaEl && card) {
-            const parts = [];
-            if (card.model) {
-                parts.push(`<span class="model-chip">${escapeHtml(card.model)}</span>`);
-            }
-            if (card.session_status) {
-                if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
-                parts.push(`<span>${escapeHtml(card.session_status)}</span>`);
-            }
-            if (card.cost_usd > 0) {
-                if (parts.length) parts.push('<span class="meta-sep">&middot;</span>');
-                parts.push(`<span>$${card.cost_usd.toFixed(2)}</span>`);
-            }
-            metaEl.innerHTML = parts.join(' ');
-        }
+        updateInspectorMeta(card);
 
         // Highlight selected card on board
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);

@@ -91,6 +91,7 @@ export function connectWebSocket() {
                     if (msg.input_tokens !== undefined) card.input_tokens = msg.input_tokens;
                     if (msg.output_tokens !== undefined) card.output_tokens = msg.output_tokens;
                     updateCardInPlace(card);
+                    window.dispatchEvent(new CustomEvent('cardcode:card-updated', { detail: { cardId: msg.id } }));
                 }
                 // Fire notification event for notifications.js
                 window.dispatchEvent(new CustomEvent('cardcode:metrics', { detail: msg }));
@@ -102,6 +103,7 @@ export function connectWebSocket() {
                 if (card) {
                     card.session_status = msg.session_status;
                     updateCardInPlace(card);
+                    window.dispatchEvent(new CustomEvent('cardcode:card-updated', { detail: { cardId: msg.id } }));
                 }
                 window.dispatchEvent(new CustomEvent('cardcode:status', { detail: msg }));
                 break;
