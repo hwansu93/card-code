@@ -2,7 +2,7 @@ import { createCardElement, handleMoveSuggestion } from './cards.js';
 import { apiPatch, apiPost, apiDelete, apiGet } from './app.js';
 import { state } from './app.js';
 import { showToast } from './notifications.js';
-import { showConfirmDialog } from './utils.js';
+import { showConfirmDialog, debugError } from './utils.js';
 
 const COLLAPSE_KEY = 'cardcode-collapsed-columns';
 
@@ -204,7 +204,7 @@ function startRename(col, nameEl) {
                     renderBoard(state.cards);
                     setupSortable();
                 } catch (err) {
-                    console.error('Rename failed:', err);
+                    debugError('Rename failed:', err);
                     showToast({ title: 'Failed to rename column', message: 'Check your connection and try again', type: 'error' });
                     nameEl.textContent = col.name.charAt(0).toUpperCase() + col.name.slice(1);
                 }
@@ -269,7 +269,7 @@ function showColumnMenu(col, anchorEl, cardCount) {
             renderBoard(state.cards);
             setupSortable();
         } catch (err) {
-            console.error('Delete column failed:', err);
+            debugError('Delete column failed:', err);
             showToast({ title: 'Failed to delete column', message: 'Check your connection and try again', type: 'error' });
         }
     });
@@ -311,7 +311,7 @@ function showAddColumnInput(addBtn) {
             renderBoard(state.cards);
             setupSortable();
         } catch (err) {
-            console.error('Add column failed:', err);
+            debugError('Add column failed:', err);
             showToast({ title: 'Failed to create column', message: 'Check your connection and try again', type: 'error' });
             form.replaceWith(addBtn);
         }
@@ -425,7 +425,7 @@ export function setupSortable() {
                         await handleMoveSuggestion(response, card);
                     }
                 } catch (err) {
-                    console.error('Move failed:', err);
+                    debugError('Move failed:', err);
                     renderBoard(state.cards);
                 }
             },
@@ -454,7 +454,7 @@ export function setupSortable() {
                     await Promise.all(updates);
                     state.columns = await apiGet('/columns');
                 } catch (err) {
-                    console.error('Column reorder failed:', err);
+                    debugError('Column reorder failed:', err);
                     showToast({ title: 'Failed to reorder columns', message: 'The board will refresh to show the current order', type: 'error' });
                     renderBoard(state.cards);
                 }

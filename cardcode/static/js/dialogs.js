@@ -1,6 +1,6 @@
 import { state, apiPost, apiPatch, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
-import { escapeHtml, showConfirmDialog, getTerminalTheme } from './utils.js';
+import { escapeHtml, showConfirmDialog, getTerminalTheme, debugError } from './utils.js';
 import { showToast } from './notifications.js';
 
 export function setupDialogs() {
@@ -52,7 +52,7 @@ function setupCardDialog() {
             updateColumnCounts();
             updateEmptyState();
         } catch (err) {
-            console.error('Save failed:', err);
+            debugError('Save failed:', err);
         }
     });
 
@@ -106,7 +106,7 @@ function setupSpawnDialog() {
             updateColumnCounts();
             updateEmptyState();
         } catch (err) {
-            console.error('Spawn failed:', err);
+            debugError('Spawn failed:', err);
         }
     });
 
@@ -147,11 +147,12 @@ function setupArchiveDrawer() {
 
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase();
-        renderArchiveList(archivedCards.filter(c =>
+        const filtered = archivedCards.filter(c =>
             c.title.toLowerCase().includes(query) ||
             (c.project || '').toLowerCase().includes(query) ||
             (c.description || '').toLowerCase().includes(query)
-        ));
+        );
+        renderArchiveList(filtered, query);
     });
 
     async function loadArchive() {
@@ -162,10 +163,13 @@ function setupArchiveDrawer() {
         updateArchiveCount(archivedCards.length);
     }
 
-    function renderArchiveList(cards) {
+    function renderArchiveList(cards, searchQuery) {
         const list = document.getElementById('archive-list');
         if (cards.length === 0) {
-            list.innerHTML = '<div class="drawer-empty">No archived cards. Archived cards will appear here.</div>';
+            const msg = searchQuery
+                ? 'No archived cards match your search.'
+                : 'No archived cards. Archived cards will appear here.';
+            list.innerHTML = `<div class="drawer-empty">${msg}</div>`;
             return;
         }
         list.innerHTML = cards.map(card => {
@@ -560,7 +564,7 @@ function setupInspector() {
             }
         } catch (err) {
             if (err.name === 'AbortError') return;
-            console.error('Failed to load terminal output:', err);
+            debugError('Failed to load terminal output:', err);
             terminalArea.classList.remove('loading');
             terminalArea.classList.add('empty');
         }
@@ -580,7 +584,7 @@ function setupInspector() {
                 if (currentInspectorCardId) loadTerminalOutput(currentInspectorCardId);
             }, 500);
         } catch (err) {
-            console.error('Prompt send failed:', err);
+            debugError('Prompt send failed:', err);
             showToast({ title: 'Failed to send prompt', type: 'error' });
         } finally {
             promptInput.disabled = false;

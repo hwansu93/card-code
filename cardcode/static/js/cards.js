@@ -1,6 +1,6 @@
 import { state, apiPatch, apiPost, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
-import { escapeHtml, showConfirmDialog } from './utils.js';
+import { escapeHtml, showConfirmDialog, debugError } from './utils.js';
 import { showToast } from './notifications.js';
 
 export function createCardElement(card) {
@@ -224,7 +224,7 @@ async function handleQuickAction(action, card, targetColumn) {
             CardCode.openTerminalViewer?.(card.id, card.title);
         }
     } catch (err) {
-        console.error(`Quick action "${action}" failed:`, err);
+        debugError(`Quick action "${action}" failed:`, err);
         if (action === 'archive') {
             showToast({ title: `Failed to archive "${card.title}"`, message: 'Check your connection and try again', type: 'error' });
         } else if (action === 'move-to') {
@@ -260,7 +260,7 @@ export async function handleMoveSuggestion(response, card) {
                 renderBoard(state.cards);
                 updateColumnCounts();
             } catch (err) {
-                console.error('Stop session failed:', err);
+                debugError('Stop session failed:', err);
                 showToast({ title: 'Failed to stop session', message: 'Check your connection and try again', type: 'error' });
             }
         }

@@ -1,4 +1,5 @@
 import { renderBoard, setupSortable, updateColumnCounts, updateEmptyState } from './board.js';
+import { debugError } from './utils.js';
 
 // Shared namespace for inter-module communication (replaces window.__ globals)
 export const CardCode = {
@@ -105,15 +106,15 @@ async function init() {
     });
 
     // These modules are created in later tasks — use dynamic import so app works without them
-    import('./dialogs.js').then(m => m.setupDialogs()).catch(err => console.error('Failed to load dialogs:', err));
-    import('./websocket.js').then(m => m.connectWebSocket()).catch(err => console.error('Failed to load websocket:', err));
-    import('./keyboard.js').then(m => m.setupKeyboard()).catch(err => console.error('Failed to load keyboard:', err));
-    import('./notifications.js').then(m => m.setupNotifications()).catch(err => console.error('Failed to load notifications:', err));
-    import('./command-center.js').then(m => m.setupCommandCenter()).catch(err => console.error('Failed to load command center:', err));
+    import('./dialogs.js').then(m => m.setupDialogs()).catch(err => debugError('Failed to load dialogs:', err));
+    import('./websocket.js').then(m => m.connectWebSocket()).catch(err => debugError('Failed to load websocket:', err));
+    import('./keyboard.js').then(m => m.setupKeyboard()).catch(err => debugError('Failed to load keyboard:', err));
+    import('./notifications.js').then(m => m.setupNotifications()).catch(err => debugError('Failed to load notifications:', err));
+    import('./command-center.js').then(m => m.setupCommandCenter()).catch(err => debugError('Failed to load command center:', err));
 }
 
 init().catch((err) => {
-    console.error('Init failed:', err);
+    debugError('Init failed:', err);
     const board = document.getElementById('board');
     board.innerHTML = `
         <div class="board-error">

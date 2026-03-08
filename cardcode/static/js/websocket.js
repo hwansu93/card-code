@@ -1,4 +1,5 @@
 import { state, apiGet } from './app.js';
+import { debugWarn, debugError } from './utils.js';
 import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, updateColumnCounts, setupSortable } from './board.js';
 
 export function connectWebSocket() {
@@ -37,7 +38,7 @@ export function connectWebSocket() {
             try {
                 msg = JSON.parse(event.data);
             } catch (e) {
-                console.warn('WebSocket: malformed JSON message', e);
+                debugWarn('WebSocket: malformed JSON message', e);
                 return;
             }
             handleMessage(msg);
@@ -52,7 +53,7 @@ export function connectWebSocket() {
         };
 
         ws.onerror = (err) => {
-            console.error('WebSocket error:', err);
+            debugError('WebSocket error:', err);
             ws.close();
         };
     }

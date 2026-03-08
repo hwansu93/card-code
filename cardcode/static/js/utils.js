@@ -56,3 +56,14 @@ export function showConfirmDialog({ title, message, confirmText = 'Confirm', can
         dialog.showModal();
     });
 }
+
+/** Debug logger — only logs when localStorage.debug is set */
+export function debug(...args) {
+  if (localStorage.getItem('cardcode_debug')) console.log('[CardCode]', ...args);
+}
+export function debugWarn(...args) {
+  if (localStorage.getItem('cardcode_debug')) console.warn('[CardCode]', ...args);
+}
+export function debugError(...args) {
+  if (localStorage.getItem('cardcode_debug')) console.error('[CardCode]', ...args);
+}

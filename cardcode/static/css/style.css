@@ -120,7 +120,7 @@ a:focus-visible {
     --status-alive:   oklch(65% 0.08 165);
     --status-waiting: oklch(68% 0.14 55);
     --status-idle:    oklch(55% 0.06 55);
-    --status-dead:    oklch(50% 0.008 250);
+    --status-dead:    oklch(55% 0.015 250);
     --status-error:   oklch(62% 0.16 25);
     --status-warning: oklch(68% 0.14 55);
     --status-critical: oklch(62% 0.16 25);
@@ -178,8 +178,12 @@ a:focus-visible {
     --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
     /* Transition */
-    --transition: 120ms ease-out;
+    --transition-fast: 80ms;
+    --transition-normal: 150ms;
+    --transition-slow: 250ms;
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-standard: var(--ease-out-quart);
+    --transition: var(--transition-normal) var(--ease-standard);
 
     color-scheme: dark;
 }
@@ -296,6 +300,17 @@ a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
+}
+
+/* --- Interactive Focus --- */
+
+.cc-sidebar-toggle:focus-visible,
+.cc-add-btn:focus-visible,
+.cc-tile-actions button:focus-visible,
+.card-overflow-btn:focus-visible,
+.btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 /* --- Toolbar --- */
@@ -526,7 +541,7 @@ a:focus-visible {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-column);
     overflow: hidden;
-    transition: width 250ms var(--ease-out-quart), opacity 200ms ease-out;
+    transition: width var(--transition-slow) var(--ease-standard), opacity var(--transition-normal) var(--ease-standard);
 }
 
 .column-header {
@@ -714,7 +729,7 @@ a:focus-visible {
     border-radius: var(--radius-column);
     cursor: pointer;
     color: var(--text-muted);
-    transition: border-color 200ms ease-out, color 200ms ease-out, background 200ms ease-out;
+    transition: border-color var(--transition-normal) var(--ease-standard), color var(--transition-normal) var(--ease-standard), background var(--transition-normal) var(--ease-standard);
 }
 .add-column-btn:hover {
     border-color: var(--accent);
@@ -785,7 +800,7 @@ a:focus-visible {
     padding: 10px 12px 6px;
     cursor: pointer;
     position: relative;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background var(--transition-normal) var(--ease-standard), border-color var(--transition-normal) var(--ease-standard);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -868,7 +883,7 @@ a:focus-visible {
 .provider-icon { flex-shrink: 0; opacity: 0.8; }
 
 .card-duration {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
 }
 
@@ -896,7 +911,7 @@ a:focus-visible {
 
 .card-context-text {
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
 }
 
@@ -919,7 +934,7 @@ a:focus-visible {
     height: 100%;
     background: var(--secondary);
     border-radius: 1px;
-    transition: width 0.3s ease;
+    transition: width var(--transition-slow) var(--ease-standard);
 }
 
 .context-fill.warning { background: var(--status-warning); }
@@ -938,7 +953,7 @@ a:focus-visible {
     padding: 2px;
     border-radius: var(--radius-sm);
     opacity: 0;
-    transition: opacity 0.15s ease, background 0.15s ease;
+    transition: opacity var(--transition-normal) var(--ease-standard), background var(--transition-normal) var(--ease-standard);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1036,7 +1051,7 @@ dialog {
 }
 
 dialog::backdrop {
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--scrim);
 }
 
 dialog h3 {
@@ -1216,7 +1231,7 @@ dialog textarea {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius);
     cursor: pointer;
-    transition: filter 120ms ease-out, border-color 120ms ease-out;
+    transition: filter var(--transition-normal) var(--ease-standard), border-color var(--transition-normal) var(--ease-standard);
 }
 
 .onboarding-card:hover {
@@ -1339,7 +1354,7 @@ dialog textarea {
 .drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: var(--scrim);
     z-index: var(--z-overlay);
     opacity: 0;
     pointer-events: none;
@@ -1365,7 +1380,7 @@ dialog textarea {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius);
     cursor: pointer;
-    transition: border-color 120ms ease-out;
+    transition: border-color var(--transition-normal) var(--ease-standard);
 }
 
 .archive-card:hover {
@@ -1383,7 +1398,7 @@ dialog textarea {
     align-items: center;
     gap: 6px;
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-family: var(--font-mono);
 }
 
@@ -1490,7 +1505,7 @@ dialog textarea {
 
 .field-hint {
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 /* Input with inline action button */
@@ -1581,7 +1596,7 @@ dialog textarea {
 }
 
 .integration-label {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 10px;
     margin-left: auto;
 }
@@ -1611,7 +1626,7 @@ dialog textarea {
     flex-direction: column;
     z-index: var(--z-drawer, 200);
     transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--transition-slow) var(--ease-standard);
 }
 
 .inspector-panel.open {
@@ -1630,7 +1645,7 @@ dialog textarea {
     z-index: calc(var(--z-drawer, 200) - 1);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity var(--transition-slow) var(--ease-standard);
 }
 
 .inspector-scrim.visible {
@@ -1699,7 +1714,7 @@ dialog textarea {
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: color var(--transition-normal) var(--ease-standard), background var(--transition-normal) var(--ease-standard);
 }
 
 .inspector-btn:hover {
@@ -1714,7 +1729,7 @@ dialog textarea {
     padding: 6px;
     border-radius: var(--radius-sm);
     color: var(--text-muted);
-    transition: color 0.15s ease;
+    transition: color var(--transition-normal) var(--ease-standard);
 }
 
 .auto-refresh-toggle:has(input:checked) {
@@ -1781,7 +1796,7 @@ dialog textarea {
     color: var(--text-primary);
     font-size: 13px;
     outline: none;
-    transition: border-color 0.15s ease;
+    transition: border-color var(--transition-normal) var(--ease-standard);
 }
 
 .inspector-input input:focus {
@@ -1801,7 +1816,7 @@ dialog textarea {
     cursor: pointer;
     display: flex;
     align-items: center;
-    transition: background 0.15s ease;
+    transition: background var(--transition-normal) var(--ease-standard);
 }
 
 .inspector-input button:hover {
@@ -1956,7 +1971,7 @@ dialog textarea {
 .hint-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--scrim);
     z-index: var(--z-overlay);
     display: flex;
     align-items: center;
@@ -2085,7 +2100,7 @@ dialog textarea {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    transition: width 0.2s ease;
+    transition: width var(--transition-normal) var(--ease-standard);
     overflow: hidden;
 }
 
@@ -2140,7 +2155,7 @@ dialog textarea {
     cursor: grab;
     font-size: 12px;
     color: var(--text-primary);
-    transition: background 0.15s ease;
+    transition: background var(--transition-normal) var(--ease-standard);
 }
 
 .cc-sidebar-card:hover {
@@ -2163,7 +2178,7 @@ dialog textarea {
     border-radius: var(--radius-sm);
     display: flex;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-normal) var(--ease-standard);
 }
 
 .cc-sidebar-card:hover .cc-add-btn { opacity: 1; }
@@ -2180,7 +2195,7 @@ dialog textarea {
 .cc-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
     grid-auto-rows: minmax(250px, 1fr);
     gap: 1px;
     background: var(--border);
@@ -2229,7 +2244,7 @@ dialog textarea {
 
 .cc-tile-model {
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     text-transform: uppercase;
 }
 
@@ -2237,7 +2252,7 @@ dialog textarea {
     display: flex;
     gap: 2px;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-normal) var(--ease-standard);
 }
 
 .cc-tile-header:hover .cc-tile-actions { opacity: 1; }
@@ -2339,5 +2354,6 @@ dialog textarea {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

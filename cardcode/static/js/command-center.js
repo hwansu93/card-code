@@ -1,5 +1,5 @@
 import { state } from './app.js';
-import { escapeHtml, getTerminalTheme } from './utils.js';
+import { escapeHtml, getTerminalTheme, debugError } from './utils.js';
 import { showToast } from './notifications.js';
 
 const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
@@ -30,7 +30,7 @@ export function setupCommandCenter() {
             try {
                 await populateSidebar();
             } catch (err) {
-                console.error('[CC] populateSidebar error:', err);
+                debugError('[CC] populateSidebar error:', err);
             }
             restoreLayout();
         }
@@ -56,7 +56,7 @@ async function populateSidebar() {
         const cards = await resp.json();
         state.cards = cards;
     } catch (err) {
-        console.error('[CC] Failed to fetch cards:', err);
+        debugError('[CC] Failed to fetch cards:', err);
     }
 
     const activeCards = state.cards.filter(c =>
@@ -266,7 +266,7 @@ async function loadTileOutput(tileData) {
         }
     } catch (err) {
         if (err.name === 'AbortError') return;
-        console.error('Failed to load tile output:', err);
+        debugError('Failed to load tile output:', err);
     }
 }
 
