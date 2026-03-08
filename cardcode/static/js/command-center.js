@@ -1,4 +1,4 @@
-import { state, apiGet } from './app.js';
+import { state } from './app.js';
 import { escapeHtml } from './utils.js';
 import { showToast } from './notifications.js';
 
