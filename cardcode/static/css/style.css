@@ -885,10 +885,16 @@ a:focus-visible {
 }
 
 .card-status-dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+}
+
+.card-context-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .card-status-dot.status-alive { background: var(--status-alive); box-shadow: 0 0 4px var(--status-alive); }

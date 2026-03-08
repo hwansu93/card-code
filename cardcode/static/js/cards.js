@@ -25,36 +25,36 @@ export function createCardElement(card) {
     const providerIcon = providerIcons[providerKey] || '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" fill="currentColor" opacity="0.5"/></svg>';
     const modelName = providerNames[providerKey] || (providerKey ? escapeHtml(providerKey) : '');
 
-    // Duration
-    const duration = card.started_at ? formatDuration(card.started_at) : '';
+    // Duration - show dash if not started
+    const duration = card.started_at ? formatDuration(card.started_at) : '\u2014';
 
     // Context percentage
     const pct = Math.min((card.context_pct || 0) * 100, 100);
     const fillClass = pct >= 80 ? 'critical' : pct >= 60 ? 'warning' : '';
+    const ctxText = pct > 0 ? `${Math.round(pct)}%` : '';
 
-    // Cost
-    const costStr = card.cost_usd > 0 ? `$${card.cost_usd.toFixed(2)}` : '';
+    // Cost - always show
+    const costStr = card.cost_usd > 0 ? `$${card.cost_usd.toFixed(2)}` : '\u2014';
 
     let html = '';
 
     // Title
     html += `<div class="card-title">${escapeHtml(card.title)}</div>`;
 
-    // Meta row: model chip + duration
-    if (modelName || duration) {
-        html += '<div class="card-meta-row">';
-        if (modelName) {
-            html += `<span class="model-chip">${providerIcon}<span class="model-name">${modelName}</span></span>`;
-        }
-        if (duration) {
-            html += `<span class="card-duration">${duration}</span>`;
-        }
-        html += '</div>';
+    // Meta row: model chip + duration (always shown)
+    html += '<div class="card-meta-row">';
+    if (modelName) {
+        html += `<span class="model-chip">${providerIcon}<span class="model-name">${modelName}</span></span>`;
     }
+    html += `<span class="card-duration">${duration}</span>`;
+    html += '</div>';
 
-    // Bottom bar: cost + status dot
+    // Bottom bar: cost + context text + status dot
     html += '<div class="card-bottom">';
     html += `<span class="card-cost">${costStr}</span>`;
+    if (ctxText) {
+        html += `<span class="card-context-text">${ctxText}</span>`;
+    }
     html += `<span class="card-status-dot status-${status}"></span>`;
     html += '</div>';
 
@@ -64,8 +64,7 @@ export function createCardElement(card) {
     el.innerHTML = html;
 
     // Card click handler — open inspector panel for all cards
-    el.addEventListener('click', (e) => {
-        if (e.defaultPrevented) return;
+    el.addEventListener('click', () => {
         CardCode.openTerminalViewer?.(card.id, card.title);
     });
 

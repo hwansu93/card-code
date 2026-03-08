@@ -373,6 +373,8 @@ export function setupSortable() {
             ghostClass: 'card-ghost',
             dragClass: 'card-drag',
             handle: '.card',
+            delay: 150,
+            delayOnTouchOnly: false,
             onEnd: async (evt) => {
                 const cardId = evt.item.dataset.cardId;
                 const newColumn = evt.to.id.replace('col-', '');
