@@ -109,7 +109,7 @@ async function init() {
     import('./websocket.js').then(m => m.connectWebSocket()).catch(err => console.error('Failed to load websocket:', err));
     import('./keyboard.js').then(m => m.setupKeyboard()).catch(err => console.error('Failed to load keyboard:', err));
     import('./notifications.js').then(m => m.setupNotifications()).catch(err => console.error('Failed to load notifications:', err));
-    import('./command-center.js').then(m => m.setupCommandCenter()).catch(err => console.error('Failed to load command center:', err));
+    import(`./command-center.js?v=${Date.now()}`).then(m => m.setupCommandCenter()).catch(err => console.error('Failed to load command center:', err));
 }
 
 init().catch((err) => {
