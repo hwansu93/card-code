@@ -31,7 +31,7 @@
             <h1 class="logo">
                 <img src="/img/cardcode-icon.svg" alt="CardCode" class="logo-icon">
                 CardCode
-                <span id="connection-status" class="connection-dot disconnected" title="Disconnected" role="status" aria-live="polite" aria-label="Connection status: disconnected"></span>
+                <span id="connection-status" class="connection-dot disconnected" title="Disconnected from server" role="status" aria-live="polite" aria-label="Disconnected from server"></span>
             </h1>
             <select id="project-filter" class="filter-select">
                 <option value="">All Projects</option>
@@ -39,7 +39,7 @@
         </div>
         <div class="toolbar-right">
             <button id="new-card-btn" class="btn btn-primary"><i data-lucide="plus"></i> New Card</button>
-            <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">
+            <button id="theme-toggle" class="btn btn-icon" title="Switch between light and dark theme">
                 <i data-lucide="sun-moon"></i>
             </button>
             <button id="settings-btn" class="btn btn-icon" title="Settings">
@@ -73,12 +73,12 @@
                             <h3>Sessions auto-detected</h3>
                             <p>Running Claude sessions are automatically discovered and appear as cards.</p>
                         </div>
-                        <div class="onboarding-card" onclick="document.getElementById('new-card-btn').click()">
+                        <div class="onboarding-card" id="onboarding-new-card" tabindex="0" role="button">
                             <i data-lucide="plus-circle"></i>
                             <h3>Create your first card</h3>
                             <p>Add a task card and spawn a Claude session for it.</p>
                         </div>
-                        <div class="onboarding-card" onclick="document.getElementById('settings-btn').click()">
+                        <div class="onboarding-card" id="onboarding-settings" tabindex="0" role="button">
                             <i data-lucide="columns-3"></i>
                             <h3>Customize your columns</h3>
                             <p>Configure workflow columns to match your process.</p>
@@ -96,14 +96,14 @@
                     <span class="terminal-session-name" id="terminal-session-name"></span>
                 </div>
                 <div class="terminal-panel-actions">
-                    <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh">
+                    <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh terminal output">
                         <i data-lucide="refresh-cw"></i>
                     </button>
-                    <button id="terminal-close" class="btn-icon-sm" title="Close terminal">
+                    <button id="terminal-close" class="btn-icon-sm" title="Close terminal panel">
                         <i data-lucide="x"></i>
                     </button>
                     <label class="auto-refresh-label">
-                        <input type="checkbox" id="terminal-auto-refresh" checked> Auto
+                        <input type="checkbox" id="terminal-auto-refresh" checked> Auto-refresh
                     </label>
                 </div>
             </div>
@@ -111,12 +111,12 @@
                 <div id="terminal-xterm-container"></div>
             </div>
             <div class="terminal-input-area" id="terminal-input-area">
-                <input type="text" id="terminal-input" class="terminal-input" placeholder="Send command..." autocomplete="off">
+                <input type="text" id="terminal-input" class="terminal-input" placeholder="Send a prompt to this session..." autocomplete="off">
             </div>
             <div class="terminal-panel-empty" id="terminal-panel-empty">
                 <div class="terminal-empty-content">
                     <i data-lucide="terminal"></i>
-                    <p>Select a card to view its terminal</p>
+                    <p>Select a card with an active session to view its output</p>
                 </div>
             </div>
         </aside>
@@ -136,7 +136,7 @@
                         <span class="label-text">Tmux Socket Path</span>
                         <div class="input-with-action">
                             <input type="text" name="tmux_socket" placeholder="/tmp/tmux-1000/default">
-                            <button type="button" class="btn btn-small btn-ghost" id="test-tmux-connection" title="Test Connection">
+                            <button type="button" class="btn btn-small btn-ghost" id="test-tmux-connection" title="Test tmux connection">
                                 <i data-lucide="plug-zap"></i>
                             </button>
                         </div>
@@ -146,11 +146,11 @@
                         <span class="label-text">Claude Directory</span>
                         <div class="input-with-action">
                             <input type="text" name="claude_dir" placeholder="~/.claude">
-                            <button type="button" class="btn btn-small btn-ghost" id="test-claude-dir" title="Test Connection">
+                            <button type="button" class="btn btn-small btn-ghost" id="test-claude-dir" title="Test Claude CLI">
                                 <i data-lucide="plug-zap"></i>
                             </button>
                         </div>
-                        <span class="field-hint">Where Claude config and data lives</span>
+                        <span class="field-hint">Where Claude stores config and session data</span>
                     </label>
                     <details class="settings-advanced">
                         <summary>Advanced</summary>
@@ -197,7 +197,7 @@
                     <label>
                         <span class="label-text">Poll Interval (ms)</span>
                         <input type="number" name="poll_interval" placeholder="3000" min="500" max="30000">
-                        <span class="field-hint">How often to refresh session data</span>
+                        <span class="field-hint">How often to poll tmux for session updates (500-30000)</span>
                     </label>
                 </fieldset>
                 <fieldset>
@@ -224,7 +224,7 @@
                 </fieldset>
                 <div class="dialog-actions">
                     <button type="submit" class="btn btn-primary">Save Settings</button>
-                    <span id="settings-saved-msg" class="saved-msg" style="display:none">Settings saved! Restart server to apply.</span>
+                    <span id="settings-saved-msg" class="saved-msg" style="display:none">Settings saved. Restart the server to apply changes.</span>
                 </div>
             </form>
         </div>
@@ -250,31 +250,31 @@
     <dialog id="card-dialog">
         <form id="card-form">
             <h3 id="card-dialog-title">New Card</h3>
-            <label>Title <input type="text" name="title" required></label>
-            <label>Description <textarea name="description" rows="3"></textarea></label>
+            <label>Title <input type="text" name="title" required placeholder="e.g., Refactor auth module"></label>
+            <label>Description <textarea name="description" rows="3" placeholder="What needs to be done?"></textarea></label>
             <label>Project
                 <select name="project" id="card-project-select">
                     <option value="">None</option>
                 </select>
             </label>
-            <label>Initial Prompt <textarea name="initial_prompt" rows="3"></textarea></label>
-            <label>Handoff Notes <textarea name="handoff_notes" rows="3"></textarea></label>
+            <label>Initial Prompt <textarea name="initial_prompt" rows="3" placeholder="Prompt sent when spawning a Claude session"></textarea></label>
+            <label>Handoff Notes <textarea name="handoff_notes" rows="3" placeholder="Context for continuing this task later"></textarea></label>
             <div class="dialog-actions">
                 <button type="button" class="btn" id="card-dialog-cancel">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="submit" class="btn btn-primary" id="card-dialog-submit">Save Card</button>
             </div>
         </form>
     </dialog>
 
     <!-- Spawn Dialog -->
     <dialog id="spawn-dialog">
-        <h3>Spawn Session</h3>
+        <h3>Spawn Claude Session</h3>
         <p id="spawn-card-title"></p>
-        <label>Project Path <input type="text" id="spawn-project-path"></label>
-        <label>Initial Prompt <textarea id="spawn-prompt" rows="3"></textarea></label>
+        <label>Project Path <input type="text" id="spawn-project-path" placeholder="/path/to/project"></label>
+        <label>Initial Prompt <textarea id="spawn-prompt" rows="3" placeholder="What should Claude work on?"></textarea></label>
         <div class="dialog-actions">
             <button class="btn" id="spawn-cancel">Cancel</button>
-            <button class="btn btn-primary" id="spawn-confirm">Spawn</button>
+            <button class="btn btn-primary" id="spawn-confirm">Spawn Session</button>
         </div>
     </dialog>
 
@@ -292,7 +292,7 @@
             <dt>?</dt><dd>Show this help</dd>
             <dt>Escape</dt><dd>Close dialog / deselect</dd>
         </dl>
-        <button class="btn" id="keyboard-dialog-close">Close</button>
+        <button class="btn" id="keyboard-dialog-close">Done</button>
     </dialog>
 
     <!-- Toast Container -->

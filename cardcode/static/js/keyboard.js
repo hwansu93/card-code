@@ -1,4 +1,4 @@
-import { state, apiPatch, apiGet } from './app.js';
+import { state, apiPatch, apiGet, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts } from './board.js';
 import { closeAllDrawers } from './dialogs.js';
 
@@ -54,7 +54,7 @@ export function setupKeyboard() {
             case 'Enter':
                 e.preventDefault();
                 if (state.selectedCardId) {
-                    window.__openCardDialog?.(state.selectedCardId);
+                    CardCode.openCardDialog?.(state.selectedCardId);
                 }
                 break;
             case 'ArrowRight':
@@ -107,7 +107,7 @@ export function setupKeyboard() {
     document.getElementById('board').addEventListener('dblclick', (e) => {
         const card = e.target.closest('.card');
         if (card && !e.target.closest('.prompt-input')) {
-            window.__openCardDialog?.(card.dataset.cardId);
+            CardCode.openCardDialog?.(card.dataset.cardId);
         }
     });
 }

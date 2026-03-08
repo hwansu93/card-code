@@ -1,4 +1,4 @@
-import { state, apiPatch } from './app.js';
+import { state, apiPatch, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 import { escapeHtml } from './utils.js';
 import { showToast } from './notifications.js';
@@ -29,21 +29,21 @@ export function createCardElement(card) {
         </div>`;
     }
 
-    // Tier 3 — Status bar (compact inline metrics)
+    // Tier 3 — Status bar (compact inline capsule badges)
     const statusParts = [];
     if (card.session_status) {
-        statusParts.push(`<span class="card-status-dot card-status-dot-${card.session_status}"></span><span>${card.session_status}</span>`);
+        statusParts.push(`<span class="status-capsule"><span class="card-status-dot card-status-dot-${card.session_status}"></span>${card.session_status}</span>`);
     }
     if (card.cost_usd > 0) {
-        statusParts.push(`<span>$${card.cost_usd.toFixed(2)}</span>`);
+        statusParts.push(`<span class="status-capsule">$${card.cost_usd.toFixed(2)}</span>`);
     }
     const pct = Math.min((card.context_pct || 0) * 100, 100);
     if (pct > 0) {
         const contextClass = pct >= 80 ? 'context-danger' : pct >= 60 ? 'context-warning' : '';
-        statusParts.push(`<span class="${contextClass}">${pct.toFixed(0)}%</span>`);
+        statusParts.push(`<span class="status-capsule ${contextClass}">${pct.toFixed(0)}%</span>`);
     }
     if (statusParts.length > 0) {
-        html += `<div class="card-status-bar">${statusParts.join('<span class="card-status-sep">\u00b7</span>')}</div>`;
+        html += `<div class="card-status-bar">${statusParts.join('')}</div>`;
     }
 
     // Context gauge — thin 2px bar at very bottom
@@ -63,7 +63,7 @@ export function createCardElement(card) {
     if (hasTerminal) {
         el.addEventListener('click', (e) => {
             if (e.defaultPrevented) return;
-            window.__openTerminalViewer?.(card.id, card.title);
+            CardCode.openTerminalViewer?.(card.id, card.title);
         });
     }
 
@@ -76,7 +76,7 @@ export function createCardElement(card) {
     // Overflow button for discoverability (visible on hover)
     const overflowBtn = document.createElement('button');
     overflowBtn.className = 'card-overflow-btn';
-    overflowBtn.setAttribute('aria-label', 'Card actions');
+    overflowBtn.setAttribute('aria-label', `Actions for ${card.title}`);
     overflowBtn.innerHTML = '<i data-lucide="more-horizontal"></i>';
     overflowBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -103,12 +103,13 @@ function showCardContextMenu(e, card) {
     const items = [
         { label: 'Edit card', action: 'edit' },
         { label: 'Move to next column', action: 'move-next' },
-        ...(hasTerminal ? [{ label: 'Open terminal', action: 'open-terminal' }] : []),
-        { label: 'Archive', action: 'archive' },
+        ...(hasTerminal ? [{ label: 'View terminal output', action: 'open-terminal' }] : []),
+        { label: 'Archive card', action: 'archive' },
     ];
 
     items.forEach(item => {
-        const el = document.createElement('div');
+        const el = document.createElement('button');
+        el.type = 'button';
         el.className = 'card-context-menu-item';
         el.setAttribute('role', 'menuitem');
         el.textContent = item.label;
@@ -131,27 +132,41 @@ function showCardContextMenu(e, card) {
         menu.style.top = `${window.innerHeight - rect.height - 4}px`;
     }
 
-    // Dismiss on click outside or Escape
+    // Arrow key navigation and Escape
+    menu.addEventListener('keydown', (ev) => {
+        const menuItems = [...menu.querySelectorAll('[role="menuitem"]')];
+        const idx = menuItems.indexOf(document.activeElement);
+        if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            menuItems[(idx + 1) % menuItems.length]?.focus();
+        } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            menuItems[(idx - 1 + menuItems.length) % menuItems.length]?.focus();
+        } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            dismissContextMenu();
+        }
+    });
+
+    // Auto-focus first item
+    const firstItem = menu.querySelector('[role="menuitem"]');
+    if (firstItem) firstItem.focus();
+
+    // Dismiss on click outside
     setTimeout(() => {
         document.addEventListener('click', dismissContextMenu, { once: true });
-        document.addEventListener('keydown', onEscDismiss);
     }, 0);
-}
-
-function onEscDismiss(e) {
-    if (e.key === 'Escape') dismissContextMenu();
 }
 
 function dismissContextMenu() {
     const existing = document.querySelector('.card-context-menu');
     if (existing) existing.remove();
-    document.removeEventListener('keydown', onEscDismiss);
 }
 
 async function handleQuickAction(action, card) {
     try {
         if (action === 'edit') {
-            window.__openCardDialog?.(card.id);
+            CardCode.openCardDialog?.(card.id);
             return;
         } else if (action === 'archive') {
             await apiPatch(`/cards/${card.id}/move`, {
@@ -176,14 +191,14 @@ async function handleQuickAction(action, card) {
             updateColumnCounts();
             updateEmptyState();
         } else if (action === 'open-terminal') {
-            window.__openTerminalViewer?.(card.id, card.title);
+            CardCode.openTerminalViewer?.(card.id, card.title);
         }
     } catch (err) {
         console.error(`Quick action "${action}" failed:`, err);
         if (action === 'archive') {
-            showToast({ title: 'Failed to archive card', type: 'error' });
+            showToast({ title: `Failed to archive "${card.title}"`, message: 'Check your connection and try again', type: 'error' });
         } else if (action === 'move-next') {
-            showToast({ title: 'Failed to move card', type: 'error' });
+            showToast({ title: `Failed to move "${card.title}"`, message: 'Check your connection and try again', type: 'error' });
         }
     }
 }

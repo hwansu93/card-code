@@ -1,4 +1,4 @@
-import { state, apiPost, apiPatch } from './app.js';
+import { state, apiPost, apiPatch, CardCode } from './app.js';
 import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 import { escapeHtml, showConfirmDialog } from './utils.js';
 import { showToast } from './notifications.js';
@@ -57,7 +57,7 @@ function setupCardDialog() {
     });
 
     // Expose for external use (edit existing card)
-    window.__openCardDialog = (cardId) => {
+    CardCode.openCardDialog = (cardId) => {
         const card = state.cards.find(c => c.id === cardId);
         if (!card) return;
         editingCardId = cardId;
@@ -110,7 +110,7 @@ function setupSpawnDialog() {
         }
     });
 
-    window.__openSpawnDialog = (cardId) => {
+    CardCode.openSpawnDialog = (cardId) => {
         const card = state.cards.find(c => c.id === cardId);
         if (!card) return;
         spawnCardId = cardId;
@@ -165,26 +165,28 @@ function setupArchiveDrawer() {
     function renderArchiveList(cards) {
         const list = document.getElementById('archive-list');
         if (cards.length === 0) {
-            list.innerHTML = '<div class="drawer-empty">No archived cards</div>';
+            list.innerHTML = '<div class="drawer-empty">No archived cards. Archived cards will appear here.</div>';
             return;
         }
-        list.innerHTML = cards.map(card => `
-            <div class="archive-card" data-card-id="${card.id}">
+        list.innerHTML = cards.map(card => {
+            const safeId = escapeHtml(String(card.id));
+            return `
+            <div class="archive-card" data-card-id="${safeId}">
                 <div class="archive-card-title">${escapeHtml(card.title)}</div>
                 <div class="archive-card-meta">
                     ${card.project ? `<span>${escapeHtml(card.project)}</span>` : ''}
                     <span>$${(card.cost_usd || 0).toFixed(2)}</span>
                 </div>
                 <div class="archive-card-actions">
-                    <button class="btn btn-small btn-ghost restore-btn" data-card-id="${card.id}">
+                    <button class="btn btn-small btn-ghost restore-btn" data-card-id="${safeId}">
                         <i data-lucide="undo-2"></i> Restore
                     </button>
-                    <button class="btn btn-small btn-ghost delete-archive-btn" data-card-id="${card.id}">
+                    <button class="btn btn-small btn-ghost delete-archive-btn" data-card-id="${safeId}">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
             </div>
-        `).join('');
+        `; }).join('');
 
         // Restore handlers
         list.querySelectorAll('.restore-btn').forEach(btn => {
@@ -211,9 +213,9 @@ function setupArchiveDrawer() {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const confirmed = await showConfirmDialog({
-                    title: 'Delete card permanently?',
-                    message: 'This cannot be undone.',
-                    confirmText: 'Delete',
+                    title: 'Permanently delete this card?',
+                    message: 'The card and all its data will be removed. This cannot be undone.',
+                    confirmText: 'Delete Permanently',
                     danger: true,
                 });
                 if (!confirmed) return;
@@ -303,12 +305,12 @@ function setupSettingsDrawer() {
 
         const port = parseInt(formData.port);
         if (formData.port && (isNaN(port) || port < 1 || port > 65535)) {
-            showToast({ title: 'Invalid port number', message: 'Must be between 1 and 65535', type: 'error' });
+            showToast({ title: 'Invalid port number', message: 'Port must be between 1 and 65535', type: 'error' });
             return;
         }
         const poll = parseInt(formData.poll_interval);
         if (formData.poll_interval && (isNaN(poll) || poll < 500 || poll > 30000)) {
-            showToast({ title: 'Invalid poll interval', message: 'Must be between 500 and 30000ms', type: 'error' });
+            showToast({ title: 'Invalid poll interval', message: 'Poll interval must be between 500ms and 30000ms', type: 'error' });
             return;
         }
 
@@ -334,12 +336,12 @@ function setupSettingsDrawer() {
             const resp = await fetch(`${basePath}/api/settings/integrations`);
             const data = await resp.json();
             if (data.tmux) {
-                showToast({ title: 'Tmux connected', type: 'success' });
+                showToast({ title: 'Tmux connection verified', type: 'success' });
             } else {
-                showToast({ title: 'Tmux not detected', message: 'Check that tmux is installed', type: 'error' });
+                showToast({ title: 'Tmux not detected', message: 'Check that tmux is installed and running', type: 'error' });
             }
         } catch {
-            showToast({ title: 'Connection test failed', type: 'error' });
+            showToast({ title: 'Could not reach server', message: 'Verify the server is running and try again', type: 'error' });
         } finally {
             btn.disabled = false;
         }
@@ -353,12 +355,12 @@ function setupSettingsDrawer() {
             const resp = await fetch(`${basePath}/api/settings/integrations`);
             const data = await resp.json();
             if (data.claude) {
-                showToast({ title: 'Claude CLI detected', type: 'success' });
+                showToast({ title: 'Claude CLI found', type: 'success' });
             } else {
-                showToast({ title: 'Claude CLI not found', message: 'Check that claude is installed and in PATH', type: 'error' });
+                showToast({ title: 'Claude CLI not found', message: 'Ensure claude is installed and available in your PATH', type: 'error' });
             }
         } catch {
-            showToast({ title: 'Connection test failed', type: 'error' });
+            showToast({ title: 'Could not reach server', message: 'Verify the server is running and try again', type: 'error' });
         } finally {
             btn.disabled = false;
         }
@@ -453,6 +455,7 @@ function setupTerminalViewer() {
 
     let currentCardId = null;
     let autoRefreshInterval = null;
+    let fetchController = null;
 
     refreshBtn.addEventListener('click', () => {
         if (currentCardId) loadTerminalOutput(currentCardId);
@@ -485,8 +488,10 @@ function setupTerminalViewer() {
     }
 
     async function loadTerminalOutput(cardId) {
+        if (fetchController) fetchController.abort();
+        fetchController = new AbortController();
         try {
-            const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`);
+            const resp = await fetch(`${basePath}/api/cards/${cardId}/terminal`, { signal: fetchController.signal });
             const data = await resp.json();
 
             if (!term) initXterm();
@@ -495,20 +500,21 @@ function setupTerminalViewer() {
             if (data.output) {
                 term.write(data.output.replace(/\n/g, '\r\n'));
             } else {
-                term.write('(no output)');
+                term.write('No output yet. The session may still be starting.');
             }
             sessionNameEl.textContent = data.session || '';
 
             if (!data.alive) {
-                term.write('\r\n\r\n--- Session ended ---');
+                term.write('\r\n\r\n--- Session has ended ---');
                 stopAutoRefresh();
             }
         } catch (err) {
+            if (err.name === 'AbortError') return;
             if (term) {
                 term.clear();
-                term.write('Failed to load terminal output');
+                term.write('Could not load terminal output. The session may no longer exist.');
             }
-            showToast({ title: 'Terminal load failed', type: 'error' });
+            showToast({ title: 'Could not load terminal output', message: 'The session may have ended or the server is unreachable', type: 'error' });
         }
     }
 
@@ -553,7 +559,7 @@ function setupTerminalViewer() {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'terminal-search-input';
-    searchInput.placeholder = 'Search...';
+    searchInput.placeholder = 'Search terminal output...';
     searchInput.style.display = 'none';
     document.querySelector('.terminal-panel-actions')?.appendChild(searchInput);
 
@@ -589,7 +595,7 @@ function setupTerminalViewer() {
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     // Expose globally for card click handler
-    window.__openTerminalViewer = async (cardId, cardTitle) => {
+    CardCode.openTerminalViewer = async (cardId, cardTitle) => {
         // Deselect previous card
         if (currentCardId) {
             const prev = document.querySelector(`[data-card-id="${currentCardId}"]`);

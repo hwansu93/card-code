@@ -14,8 +14,13 @@ export function connectWebSocket() {
     function setStatus(status) {
         if (!statusDot) return;
         statusDot.className = `connection-dot ${status}`;
-        statusDot.title = status.charAt(0).toUpperCase() + status.slice(1);
-        statusDot.setAttribute('aria-label', `Connection status: ${status}`);
+        const labels = {
+            connected: 'Connected to server',
+            disconnected: 'Disconnected from server',
+            reconnecting: 'Reconnecting to server...',
+        };
+        statusDot.title = labels[status] || status;
+        statusDot.setAttribute('aria-label', labels[status] || `Connection: ${status}`);
     }
 
     function connect() {
@@ -23,19 +28,23 @@ export function connectWebSocket() {
         ws = new WebSocket(url);
 
         ws.onopen = () => {
-            console.log('WebSocket connected');
             reconnectDelay = 1000;
             setStatus('connected');
         };
 
         ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
+            let msg;
+            try {
+                msg = JSON.parse(event.data);
+            } catch (e) {
+                console.warn('WebSocket: malformed JSON message', e);
+                return;
+            }
             handleMessage(msg);
         };
 
         ws.onclose = () => {
             setStatus('disconnected');
-            console.log(`WebSocket closed, reconnecting in ${reconnectDelay}ms`);
             setTimeout(() => {
                 reconnectDelay = Math.min(reconnectDelay * 2, maxDelay);
                 connect();

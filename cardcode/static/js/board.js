@@ -47,12 +47,12 @@ export function renderBoard(cards) {
                         <h3>Sessions auto-detected</h3>
                         <p>Running Claude sessions are automatically discovered and appear as cards.</p>
                     </div>
-                    <div class="onboarding-card" onclick="document.getElementById('new-card-btn').click()">
+                    <div class="onboarding-card" id="onboarding-new-card">
                         <i data-lucide="plus-circle"></i>
                         <h3>Create your first card</h3>
                         <p>Add a task card and spawn a Claude session for it.</p>
                     </div>
-                    <div class="onboarding-card" onclick="document.getElementById('settings-btn').click()">
+                    <div class="onboarding-card" id="onboarding-settings">
                         <i data-lucide="columns-3"></i>
                         <h3>Customize your columns</h3>
                         <p>Configure workflow columns to match your process.</p>
@@ -99,7 +99,7 @@ export function renderBoard(cards) {
         collapseBtn.className = 'btn btn-icon-sm collapse-toggle';
         collapseBtn.title = isCollapsed ? 'Expand' : 'Collapse';
         collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
-        collapseBtn.setAttribute('aria-label', `Collapse ${col.name}`);
+        collapseBtn.setAttribute('aria-label', isCollapsed ? `Expand ${col.name} column` : `Collapse ${col.name} column`);
         collapseBtn.innerHTML = `<i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-left'}"></i>`;
         collapseBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -110,7 +110,7 @@ export function renderBoard(cards) {
             const icon = collapseBtn.querySelector('i');
             icon.setAttribute('data-lucide', nowCollapsed ? 'chevron-right' : 'chevron-left');
             collapseBtn.title = nowCollapsed ? 'Expand' : 'Collapse';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons({ root: collapseBtn });
         });
 
         // Column name (double-click to rename)
@@ -147,7 +147,7 @@ export function renderBoard(cards) {
         if (colCards.length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'column-empty';
-            placeholder.textContent = 'Drag cards here';
+            placeholder.textContent = 'No cards — drag or create one';
             body.appendChild(placeholder);
         } else {
             colCards.forEach(card => {
@@ -182,8 +182,8 @@ export function renderBoard(cards) {
         board.appendChild(addBtn);
     }
 
-    // Re-render Lucide icons
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Re-render Lucide icons scoped to board
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: board });
 }
 
 function startRename(col, nameEl) {
@@ -205,7 +205,7 @@ function startRename(col, nameEl) {
                     setupSortable();
                 } catch (err) {
                     console.error('Rename failed:', err);
-                    showToast({ title: 'Failed to rename column', type: 'error' });
+                    showToast({ title: 'Failed to rename column', message: 'Check your connection and try again', type: 'error' });
                     nameEl.textContent = col.name.charAt(0).toUpperCase() + col.name.slice(1);
                 }
             } else {
@@ -255,9 +255,9 @@ function showColumnMenu(col, anchorEl, cardCount) {
         menu.remove();
         if (cardCount > 0) {
             const confirmed = await showConfirmDialog({
-                title: 'Delete column',
-                message: `Cards will be moved to the first column.`,
-                confirmText: 'Delete',
+                title: `Delete "${col.name}" column?`,
+                message: `${cardCount} card${cardCount === 1 ? '' : 's'} in this column will be moved to the first column.`,
+                confirmText: 'Delete Column',
                 danger: true,
             });
             if (!confirmed) return;
@@ -270,14 +270,14 @@ function showColumnMenu(col, anchorEl, cardCount) {
             setupSortable();
         } catch (err) {
             console.error('Delete column failed:', err);
-            showToast({ title: 'Failed to delete column', type: 'error' });
+            showToast({ title: 'Failed to delete column', message: 'Check your connection and try again', type: 'error' });
         }
     });
 
     menu.appendChild(deleteItem);
     anchorEl.parentNode.appendChild(menu);
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: menu });
 
     // Close on click outside
     const closeHandler = (e) => {
@@ -297,7 +297,7 @@ function showAddColumnInput(addBtn) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'add-column-input';
-    input.placeholder = 'Column name...';
+    input.placeholder = 'New column name';
 
     const confirm = async () => {
         const name = input.value.trim();
@@ -312,7 +312,7 @@ function showAddColumnInput(addBtn) {
             setupSortable();
         } catch (err) {
             console.error('Add column failed:', err);
-            showToast({ title: 'Failed to create column', type: 'error' });
+            showToast({ title: 'Failed to create column', message: 'Check your connection and try again', type: 'error' });
             form.replaceWith(addBtn);
         }
     };
@@ -343,7 +343,7 @@ export function updateEmptyState() {
     const totalCards = state.cards.length;
     if (totalCards === 0) {
         emptyEl.classList.remove('hidden');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons({ root: emptyEl });
     } else {
         emptyEl.classList.add('hidden');
     }
@@ -415,7 +415,7 @@ export function setupSortable() {
                     if (srcCards.length === 0 && !evt.from.querySelector('.column-empty')) {
                         const ph = document.createElement('div');
                         ph.className = 'column-empty';
-                        ph.textContent = 'Drag cards here';
+                        ph.textContent = 'No cards — drag or create one';
                         evt.from.appendChild(ph);
                     }
                 } catch (err) {
@@ -449,7 +449,7 @@ export function setupSortable() {
                     state.columns = await apiGet('/columns');
                 } catch (err) {
                     console.error('Column reorder failed:', err);
-                    showToast({ title: 'Failed to reorder columns', type: 'error' });
+                    showToast({ title: 'Failed to reorder columns', message: 'The board will refresh to show the current order', type: 'error' });
                     renderBoard(state.cards);
                 }
             },
@@ -485,7 +485,7 @@ export function addCardToBoard(cardData) {
         container.appendChild(cardEl);
         updateColumnCounts();
         updateEmptyState();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons({ root: container });
     }
 }
 
@@ -498,7 +498,7 @@ export function removeCardFromBoard(cardId) {
         if (container && container.querySelectorAll('.card').length === 0 && !container.querySelector('.column-empty')) {
             const ph = document.createElement('div');
             ph.className = 'column-empty';
-            ph.textContent = 'Drag cards here';
+            ph.textContent = 'No cards — drag or create one';
             container.appendChild(ph);
         }
     }

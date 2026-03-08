@@ -1,5 +1,12 @@
 import { renderBoard, setupSortable, updateColumnCounts, updateEmptyState } from './board.js';
 
+// Shared namespace for inter-module communication (replaces window.__ globals)
+export const CardCode = {
+    openCardDialog: null,
+    openSpawnDialog: null,
+    openTerminalViewer: null,
+};
+
 // State
 export const state = {
     cards: [],
@@ -47,7 +54,7 @@ export async function apiDelete(path) {
 // Initialize
 async function init() {
     const board = document.getElementById('board');
-    board.innerHTML = '<div class="board-loading">Loading...</div>';
+    board.innerHTML = '<div class="board-loading">Loading board and sessions...</div>';
 
     // Load initial data — columns first so renderBoard can use them
     state.columns = await apiGet('/columns');
@@ -60,8 +67,8 @@ async function init() {
     updateEmptyState();
     setupSortable();
 
-    // Render Lucide icons
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Render Lucide icons scoped to document body
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: document.body });
 
     // Populate project filter
     const filter = document.getElementById('project-filter');
@@ -89,6 +96,14 @@ async function init() {
         localStorage.setItem('cardcode-theme', next);
     });
 
+    // Onboarding card click handlers
+    document.getElementById('onboarding-new-card')?.addEventListener('click', () => {
+        document.getElementById('new-card-btn').click();
+    });
+    document.getElementById('onboarding-settings')?.addEventListener('click', () => {
+        document.getElementById('settings-btn').click();
+    });
+
     // These modules are created in later tasks — use dynamic import so app works without them
     import('./dialogs.js').then(m => m.setupDialogs()).catch(() => {});
     import('./websocket.js').then(m => m.connectWebSocket()).catch(() => {});
@@ -101,9 +116,9 @@ init().catch((err) => {
     const board = document.getElementById('board');
     board.innerHTML = `
         <div class="board-error">
-            <h2>Unable to connect</h2>
-            <p>Could not reach the CardCode server.</p>
-            <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+            <h2>Could not connect to CardCode</h2>
+            <p>The server may not be running. Check that the CardCode process is started and try again.</p>
+            <button class="btn btn-primary" onclick="location.reload()">Retry Connection</button>
         </div>
     `;
 });

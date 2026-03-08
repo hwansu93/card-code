@@ -6,6 +6,12 @@ export function escapeHtml(str) {
 
 export function showConfirmDialog({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false }) {
     return new Promise((resolve) => {
+        let resolved = false;
+        function resolveOnce(value) {
+            if (resolved) return;
+            resolved = true;
+            resolve(value);
+        }
         const dialog = document.createElement('dialog');
         dialog.className = 'dialog confirm-dialog';
         dialog.innerHTML = `
@@ -16,9 +22,9 @@ export function showConfirmDialog({ title, message, confirmText = 'Confirm', can
                 <button class="btn ${danger ? 'btn-danger' : 'btn-primary'} confirm-btn">${escapeHtml(confirmText)}</button>
             </div>
         `;
-        dialog.querySelector('.cancel-btn').addEventListener('click', () => { dialog.close(); resolve(false); });
-        dialog.querySelector('.confirm-btn').addEventListener('click', () => { dialog.close(); resolve(true); });
-        dialog.addEventListener('close', () => { dialog.remove(); resolve(false); });
+        dialog.querySelector('.cancel-btn').addEventListener('click', () => { dialog.close(); resolveOnce(false); });
+        dialog.querySelector('.confirm-btn').addEventListener('click', () => { dialog.close(); resolveOnce(true); });
+        dialog.addEventListener('close', () => { dialog.remove(); resolveOnce(false); });
         document.body.appendChild(dialog);
         dialog.showModal();
     });

@@ -47,24 +47,29 @@ export function setupNotifications() {
         const title = card?.title || 'Session';
 
         if (session_status === 'waiting') {
-            showToast({ title, message: 'Needs attention — waiting for input', type: 'warning' });
+            showToast({ title: `${title} needs input`, message: 'The session is waiting for a response', type: 'warning' });
         } else if (session_status === 'dead') {
-            showToast({ title, message: 'Session ended', type: 'info' });
+            showToast({ title: `${title} session ended`, type: 'info' });
         }
     });
 
-    // Context warnings
+    // Context warnings (deduplicated per card)
+    const notifiedContextCards = new Set();
     window.addEventListener('cardcode:metrics', (e) => {
         const { id, context_pct } = e.detail;
         if (context_pct && context_pct > 0.6) {
+            if (notifiedContextCards.has(id)) return;
+            notifiedContextCards.add(id);
             const card = state.cards.find(c => c.id === id);
             const title = card?.title || 'Session';
             const pct = (context_pct * 100).toFixed(0);
             showToast({
                 title: `${title} — context at ${pct}%`,
-                message: 'Consider starting a new session',
+                message: 'Consider handing off to a new session soon',
                 type: context_pct > 0.8 ? 'error' : 'warning',
             });
+        } else if (context_pct && context_pct <= 0.6) {
+            notifiedContextCards.delete(id);
         }
     });
 }
