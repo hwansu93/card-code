@@ -14,7 +14,7 @@ export function setupCommandCenter() {
 
     if (!toggle || !board || !cc) return;
 
-    toggle.addEventListener('click', () => {
+    toggle.addEventListener('click', async () => {
         const isCC = !cc.classList.contains('hidden');
         if (isCC) {
             cc.classList.add('hidden');
@@ -27,7 +27,7 @@ export function setupCommandCenter() {
             cc.classList.remove('hidden');
             toggle.querySelector('i').setAttribute('data-lucide', 'kanban');
             toggle.title = 'Board View';
-            populateSidebar();
+            await populateSidebar();
             restoreLayout();
         }
         lucide.createIcons();
@@ -42,9 +42,17 @@ export function setupCommandCenter() {
     setupSidebarDrag();
 }
 
-function populateSidebar() {
+async function populateSidebar() {
     const list = document.getElementById('cc-card-list');
     if (!list) return;
+
+    try {
+        const resp = await fetch(basePath + '/api/cards');
+        const cards = await resp.json();
+        state.cards = cards;
+    } catch (err) {
+        console.error('Failed to fetch cards for sidebar:', err);
+    }
 
     const activeCards = state.cards.filter(c =>
         c.tmux_session && ['alive', 'waiting', 'idle'].includes(c.session_status)
