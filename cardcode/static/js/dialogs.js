@@ -385,7 +385,7 @@ function setupSettingsDrawer() {
     });
 }
 
-// ── Terminal Panel (persistent right panel) ─────────────────────
+// ── Inspector Panel (persistent right panel with tabs) ──────────
 
 let term = null;
 let fitAddon = null;
@@ -398,7 +398,6 @@ function getTerminalTheme() {
         foreground: style.getPropertyValue('--terminal-fg').trim() || '#e8e6e3',
         cursor: style.getPropertyValue('--terminal-cursor').trim() || '#e5853d',
         selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(229, 133, 61, 0.3)',
-        // Standard ANSI colors (these stay constant across themes)
         black: '#1a1c24',
         red: '#ef4444',
         green: '#4ade80',
@@ -444,13 +443,95 @@ function initXterm() {
     fitAddon.fit();
 }
 
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.inspector-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    // Update tab content
+    document.querySelectorAll('.inspector-tab-content').forEach(pane => {
+        pane.classList.toggle('active', pane.id === `tab-${tabName}`);
+    });
+    // Show/hide terminal input area based on tab
+    const inputArea = document.getElementById('terminal-input-area');
+    if (inputArea && !inputArea.classList.contains('hidden')) {
+        inputArea.style.display = tabName === 'terminal' ? '' : 'none';
+    }
+    // Refit terminal when switching to terminal tab
+    if (tabName === 'terminal' && fitAddon && term) {
+        requestAnimationFrame(() => fitAddon.fit());
+    }
+}
+
+function populateDetailTab(card) {
+    const detailContent = document.getElementById('detail-content');
+    if (!detailContent || !card) return;
+
+    let html = '';
+
+    // Metrics grid
+    const costUsd = (card.cost_usd || 0).toFixed(2);
+    const ctxPct = Math.min((card.context_pct || 0) * 100, 100).toFixed(0);
+    const inputTokens = card.input_tokens || 0;
+    const outputTokens = card.output_tokens || 0;
+
+    html += '<div class="detail-metrics">';
+    html += `<div class="metric-item"><div class="metric-value">$${escapeHtml(costUsd)}</div><div class="metric-label">Cost</div></div>`;
+    html += `<div class="metric-item"><div class="metric-value">${escapeHtml(ctxPct)}%</div><div class="metric-label">Context</div></div>`;
+    html += `<div class="metric-item"><div class="metric-value">${formatTokens(inputTokens)}</div><div class="metric-label">Input Tokens</div></div>`;
+    html += `<div class="metric-item"><div class="metric-value">${formatTokens(outputTokens)}</div><div class="metric-label">Output Tokens</div></div>`;
+    html += '</div>';
+
+    // Description
+    if (card.description) {
+        html += '<div class="detail-section"><h4>Description</h4>';
+        html += `<p>${escapeHtml(card.description)}</p></div>`;
+    }
+
+    // Initial Prompt
+    if (card.initial_prompt) {
+        html += '<div class="detail-section"><h4>Initial Prompt</h4>';
+        html += `<p>${escapeHtml(card.initial_prompt)}</p></div>`;
+    }
+
+    // Handoff Notes
+    if (card.handoff_notes) {
+        html += '<div class="detail-section"><h4>Handoff Notes</h4>';
+        html += `<p>${escapeHtml(card.handoff_notes)}</p></div>`;
+    }
+
+    // Metadata
+    const metaParts = [];
+    if (card.project_path || card.project) metaParts.push(`<strong>Project:</strong> ${escapeHtml(card.project_path || card.project)}`);
+    if (card.session_status) metaParts.push(`<strong>Status:</strong> ${escapeHtml(card.session_status)}`);
+    if (card.column_name) metaParts.push(`<strong>Column:</strong> ${escapeHtml(card.column_name)}`);
+    if (card.created_at) metaParts.push(`<strong>Created:</strong> ${new Date(card.created_at).toLocaleString()}`);
+
+    if (metaParts.length > 0) {
+        html += '<div class="detail-section"><h4>Info</h4>';
+        html += metaParts.map(p => `<p>${p}</p>`).join('');
+        html += '</div>';
+    }
+
+    if (!html) {
+        html = '<p>No details available for this card.</p>';
+    }
+
+    detailContent.innerHTML = html;
+}
+
+function formatTokens(count) {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+    return String(count);
+}
+
 function setupTerminalViewer() {
-    const panel = document.getElementById('terminal-panel');
-    const emptyState = document.getElementById('terminal-panel-empty');
+    const panel = document.getElementById('inspector-panel');
+    const emptyState = document.getElementById('inspector-empty');
     const refreshBtn = document.getElementById('terminal-refresh');
     const autoRefreshCheck = document.getElementById('terminal-auto-refresh');
-    const titleEl = document.getElementById('terminal-card-title');
-    const sessionNameEl = document.getElementById('terminal-session-name');
+    const titleEl = document.getElementById('inspector-card-title');
     const basePath = document.querySelector('meta[name="base-path"]')?.content || '';
 
     let currentCardId = null;
@@ -467,6 +548,13 @@ function setupTerminalViewer() {
         } else {
             stopAutoRefresh();
         }
+    });
+
+    // Tab switching
+    document.querySelectorAll('.inspector-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchTab(btn.dataset.tab);
+        });
     });
 
     function stopAutoRefresh() {
@@ -503,7 +591,6 @@ function setupTerminalViewer() {
             } else {
                 term.write('No output yet. The session may still be starting.');
             }
-            sessionNameEl.textContent = data.session || '';
 
             if (!data.alive) {
                 term.write('\r\n\r\n--- Session has ended ---');
@@ -548,22 +635,22 @@ function setupTerminalViewer() {
         }
     });
 
-    // Resize handle for terminal panel
+    // Resize handle
     setupResizeHandle();
 
-    // Close button for terminal panel
-    document.getElementById('terminal-close')?.addEventListener('click', () => {
-        document.getElementById('terminal-panel')?.classList.add('collapsed');
+    // Close button
+    document.getElementById('inspector-close')?.addEventListener('click', () => {
+        panel.classList.add('collapsed');
     });
 
-    // Ctrl+F search in terminal — inline search bar
+    // Ctrl+F search in terminal
     let searchVisible = false;
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'terminal-search-input';
     searchInput.placeholder = 'Search terminal output...';
     searchInput.style.display = 'none';
-    document.querySelector('.terminal-panel-actions')?.appendChild(searchInput);
+    document.querySelector('.inspector-header-actions')?.appendChild(searchInput);
 
     searchInput.addEventListener('input', () => {
         if (searchAddon && searchInput.value) searchAddon.findNext(searchInput.value);
@@ -597,7 +684,7 @@ function setupTerminalViewer() {
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     // Expose globally for card click handler
-    const cardMetaEl = document.getElementById('terminal-card-meta');
+    const cardMetaEl = document.getElementById('inspector-card-meta');
     const terminalOutput = document.getElementById('terminal-output');
 
     CardCode.openTerminalViewer = async (cardId, cardTitle) => {
@@ -611,8 +698,8 @@ function setupTerminalViewer() {
         state.selectedCardId = cardId;
         titleEl.textContent = cardTitle || 'Session';
 
-        // Show the terminal panel
-        document.getElementById('terminal-panel')?.classList.remove('collapsed');
+        // Show the inspector panel
+        panel.classList.remove('collapsed');
 
         // Highlight selected card
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
@@ -648,8 +735,12 @@ function setupTerminalViewer() {
             cardMetaEl.textContent = parts.join(' \u00b7 ');
         }
 
+        // Populate the detail tab
+        if (card) populateDetailTab(card);
+
         if (hasSession) {
-            // Show terminal, hide any no-session info
+            // Auto-switch to terminal tab for cards with sessions
+            switchTab('terminal');
             terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
             await loadTerminalOutput(cardId);
             if (card && card.is_external) {
@@ -657,21 +748,17 @@ function setupTerminalViewer() {
             } else {
                 terminalInputArea.classList.remove('hidden');
             }
+            terminalInputArea.style.display = '';
             if (autoRefreshCheck.checked) startAutoRefresh();
         } else {
-            // No session — show card description/prompt instead of terminal
+            // No session — auto-switch to detail tab
+            switchTab('detail');
             stopAutoRefresh();
             terminalInputArea.classList.add('hidden');
             terminalOutput.querySelectorAll('.terminal-no-session').forEach(el => el.remove());
             if (term) { term.reset(); if (fitAddon) fitAddon.fit(); }
             const infoDiv = document.createElement('div');
             infoDiv.className = 'terminal-no-session';
-            if (card?.description) {
-                infoDiv.innerHTML = `<h4>Description</h4><p>${escapeHtml(card.description)}</p>`;
-            }
-            if (card?.initial_prompt) {
-                infoDiv.innerHTML += `<h4>Initial Prompt</h4><p>${escapeHtml(card.initial_prompt)}</p>`;
-            }
             if (!card?.description && !card?.initial_prompt) {
                 infoDiv.innerHTML = '<p>No active session. Click "Spawn session" from the card menu to start one.</p>';
             }
@@ -688,8 +775,8 @@ function setupTerminalViewer() {
 }
 
 function setupResizeHandle() {
-    const handle = document.getElementById('terminal-resize-handle');
-    const panel = document.getElementById('terminal-panel');
+    const handle = document.getElementById('inspector-resize-handle');
+    const panel = document.getElementById('inspector-panel');
     if (!handle || !panel) return;
 
     let startX, startWidth;
@@ -706,7 +793,7 @@ function setupResizeHandle() {
 
     function onMouseMove(e) {
         const delta = startX - e.clientX;
-        const newWidth = Math.max(280, Math.min(800, startWidth + delta));
+        const newWidth = Math.max(400, Math.min(900, startWidth + delta));
         panel.style.width = newWidth + 'px';
         if (fitAddon) fitAddon.fit();
     }

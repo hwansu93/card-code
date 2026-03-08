@@ -88,37 +88,62 @@
             </div>
         </main>
 
-        <aside class="terminal-panel collapsed" id="terminal-panel" role="complementary" aria-label="Terminal output">
-            <div id="terminal-resize-handle" class="terminal-resize-handle"></div>
-            <div class="terminal-panel-header" id="terminal-panel-header">
-                <div class="terminal-header-info">
-                    <h3><i data-lucide="terminal"></i> <span id="terminal-card-title">Terminal</span></h3>
-                    <span class="terminal-session-name" id="terminal-session-name"></span>
-                    <span class="terminal-card-meta" id="terminal-card-meta"></span>
+        <aside class="inspector-panel collapsed" id="inspector-panel" role="complementary" aria-label="Inspector panel">
+            <div id="inspector-resize-handle" class="inspector-resize-handle"></div>
+
+            <!-- Card Header -->
+            <div class="inspector-header">
+                <div class="inspector-header-info">
+                    <span class="inspector-card-title" id="inspector-card-title"></span>
+                    <span class="inspector-card-meta" id="inspector-card-meta"></span>
                 </div>
-                <div class="terminal-panel-actions">
+                <div class="inspector-header-actions">
                     <button class="btn btn-small btn-ghost" id="terminal-refresh" title="Refresh terminal output">
                         <i data-lucide="refresh-cw"></i>
-                    </button>
-                    <button id="terminal-close" class="btn-icon-sm" title="Close terminal panel">
-                        <i data-lucide="x"></i>
                     </button>
                     <label class="auto-refresh-toggle" title="Toggle auto-refresh">
                         <input type="checkbox" id="terminal-auto-refresh" checked>
                         <i data-lucide="refresh-cw" class="auto-refresh-icon"></i>
                     </label>
+                    <button class="btn-icon-sm" id="inspector-close" title="Close panel">
+                        <i data-lucide="x" width="14" height="14"></i>
+                    </button>
                 </div>
             </div>
-            <div class="terminal-output" id="terminal-output">
-                <div id="terminal-xterm-container"></div>
+
+            <!-- Tab Bar -->
+            <div class="inspector-tabs">
+                <button class="inspector-tab active" data-tab="terminal">Terminal</button>
+                <button class="inspector-tab" data-tab="detail">Details</button>
             </div>
+
+            <!-- Tab Content -->
+            <div class="inspector-content">
+                <!-- Terminal Tab -->
+                <div class="inspector-tab-content active" id="tab-terminal">
+                    <div class="terminal-output" id="terminal-output">
+                        <div id="terminal-xterm-container"></div>
+                    </div>
+                </div>
+
+                <!-- Detail Tab -->
+                <div class="inspector-tab-content" id="tab-detail">
+                    <div class="detail-content" id="detail-content">
+                        <!-- Card details: description, prompt, handoff notes, metrics -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area (terminal tab only) -->
             <div class="terminal-input-area" id="terminal-input-area">
                 <input type="text" id="terminal-input" class="terminal-input" placeholder="Send a prompt to this session..." autocomplete="off">
             </div>
-            <div class="terminal-panel-empty" id="terminal-panel-empty">
-                <div class="terminal-empty-content">
-                    <i data-lucide="terminal"></i>
-                    <p>Select a card with an active session to view its output</p>
+
+            <!-- Empty state (no card selected) -->
+            <div class="inspector-empty" id="inspector-empty">
+                <div class="inspector-empty-content">
+                    <i data-lucide="panel-right"></i>
+                    <p>Select a card to view details</p>
                 </div>
             </div>
         </aside>

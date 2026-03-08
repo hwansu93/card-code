@@ -65,15 +65,10 @@ export function createCardElement(card) {
 
     el.innerHTML = html;
 
-    // Card click handler — terminal for session cards, edit for others
+    // Card click handler — open inspector panel for all cards
     el.addEventListener('click', (e) => {
         if (e.defaultPrevented) return;
-        const hasTerminal = card.tmux_session || card.is_external;
-        if (hasTerminal) {
-            CardCode.openTerminalViewer?.(card.id, card.title);
-        } else {
-            CardCode.openCardDialog?.(card.id);
-        }
+        CardCode.openTerminalViewer?.(card.id, card.title);
     });
 
     // Right-click context menu

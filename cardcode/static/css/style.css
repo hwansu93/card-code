@@ -1593,20 +1593,25 @@ dialog textarea {
     to { opacity: 1; }
 }
 
-/* --- Terminal Panel (persistent right panel) --- */
+/* --- Inspector Panel (persistent right panel) --- */
 
-.terminal-panel {
-    width: 420px;
+.inspector-panel {
+    width: 600px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: var(--bg-primary);
-    border-left: 1px solid var(--border);
+    border-left: 1px solid var(--border-subtle);
+    background: var(--surface-column);
+    height: 100%;
     position: relative;
 }
 
+.inspector-panel.collapsed {
+    display: none;
+}
+
 /* Resize handle */
-.terminal-resize-handle {
+.inspector-resize-handle {
     position: absolute;
     top: 0;
     left: -1px;
@@ -1617,21 +1622,21 @@ dialog textarea {
     transition: background 200ms ease-out;
 }
 
-.terminal-resize-handle:hover {
-    background: var(--accent-bold);
+.inspector-resize-handle:hover {
+    background: var(--accent);
 }
 
-.terminal-panel-header {
+/* Inspector header */
+.inspector-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    min-height: 40px;
-    background: var(--bg-secondary);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    min-height: 44px;
 }
 
-.terminal-header-info {
+.inspector-header-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1639,38 +1644,33 @@ dialog textarea {
     min-width: 0;
 }
 
-.terminal-header-info h3 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-    font-family: var(--font-body);
-    font-size: 13px;
+.inspector-card-title {
     font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.terminal-header-info h3 svg {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-}
-
-.terminal-session-name {
-    font-family: var(--font-mono);
-    font-size: 10px;
+.inspector-card-meta {
+    font-size: 11px;
     color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.terminal-panel-actions {
+.inspector-header-actions {
     display: flex;
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
 }
 
+/* Auto-refresh toggle */
 .auto-refresh-toggle {
     display: flex;
     align-items: center;
@@ -1699,12 +1699,80 @@ dialog textarea {
     color: var(--accent);
 }
 
-.terminal-card-meta {
-    font-size: 10px;
+/* Inspector tabs */
+.inspector-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 16px;
+    gap: 0;
+}
+
+.inspector-tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-muted);
-    white-space: nowrap;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms;
+}
+
+.inspector-tab:hover {
+    color: var(--text-primary);
+}
+
+.inspector-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+}
+
+/* Inspector content area */
+.inspector-content {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+.inspector-tab-content {
+    display: none;
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+}
+
+.inspector-tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Terminal xterm container */
+#terminal-xterm-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Terminal output */
+.terminal-output {
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
+    background: var(--terminal-bg);
+    margin: 0;
+    padding: 0;
+}
+
+.terminal-output pre {
+    margin: 0;
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--terminal-fg);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    min-height: 100%;
 }
 
 .terminal-no-session {
@@ -1723,26 +1791,6 @@ dialog textarea {
 
 .terminal-no-session p {
     margin: 0 0 8px;
-}
-
-.terminal-output {
-    flex: 1;
-    overflow: auto;
-    background: var(--terminal-bg);
-    margin: 0;
-    padding: 0;
-}
-
-.terminal-output pre {
-    margin: 0;
-    padding: 10px 12px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--terminal-fg);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    min-height: 100%;
 }
 
 /* Terminal input */
@@ -1774,8 +1822,60 @@ dialog textarea {
     display: none;
 }
 
-/* Terminal panel empty state */
-.terminal-panel-empty {
+/* Detail tab content */
+.detail-content {
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.detail-content h4 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 4px 0;
+}
+
+.detail-content p {
+    margin: 0 0 16px 0;
+    color: var(--text-secondary);
+}
+
+.detail-content .detail-section {
+    margin-bottom: 16px;
+}
+
+.detail-content .detail-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.detail-content .metric-item {
+    padding: 8px 12px;
+    background: var(--surface-card);
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+}
+
+.detail-content .metric-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.detail-content .metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Inspector empty state */
+.inspector-empty {
     position: absolute;
     inset: 0;
     display: flex;
@@ -1785,23 +1885,23 @@ dialog textarea {
     z-index: var(--z-base);
 }
 
-.terminal-panel-empty.hidden {
+.inspector-empty.hidden {
     display: none;
 }
 
-.terminal-empty-content {
+.inspector-empty-content {
     text-align: center;
     color: var(--text-muted);
 }
 
-.terminal-empty-content svg {
+.inspector-empty-content svg {
     width: 28px;
     height: 28px;
     margin-bottom: 10px;
     opacity: 0.4;
 }
 
-.terminal-empty-content p {
+.inspector-empty-content p {
     font-size: 12px;
 }
 
@@ -1974,11 +2074,7 @@ dialog textarea {
     outline-offset: 2px;
 }
 
-/* --- Terminal Panel Collapsed --- */
-
-.terminal-panel.collapsed {
-    display: none;
-}
+/* (inspector-panel.collapsed is defined above in the main inspector block) */
 
 /* --- Board Loading / Error States --- */
 
@@ -2051,8 +2147,8 @@ dialog textarea {
 /* --- Responsive --- */
 
 @media (max-width: 1024px) {
-    .terminal-panel {
-        width: 320px;
+    .inspector-panel {
+        width: 420px;
     }
 
     .onboarding-actions {
@@ -2069,14 +2165,14 @@ dialog textarea {
         flex-direction: column;
     }
 
-    .terminal-panel {
+    .inspector-panel {
         width: 100%;
         height: 40vh;
         border-left: none;
         border-top: 1px solid var(--border);
     }
 
-    .terminal-resize-handle {
+    .inspector-resize-handle {
         display: none;
     }
 
@@ -2089,7 +2185,7 @@ dialog textarea {
         width: 100%;
     }
 
-    .terminal-panel.mobile-open {
+    .inspector-panel.mobile-open {
         display: flex;
         position: fixed;
         bottom: 0;
