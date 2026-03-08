@@ -109,6 +109,7 @@ async function init() {
     import('./websocket.js').then(m => m.connectWebSocket()).catch(() => {});
     import('./keyboard.js').then(m => m.setupKeyboard()).catch(() => {});
     import('./notifications.js').then(m => m.setupNotifications()).catch(() => {});
+    import('./command-center.js').then(m => m.setupCommandCenter()).catch(err => console.error('Failed to load command center:', err));
 }
 
 init().catch((err) => {

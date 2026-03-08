@@ -2058,6 +2058,228 @@ dialog textarea {
     box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
+/* ── Command Center ── */
+.command-center {
+    display: flex;
+    height: calc(100vh - 44px);
+    background: var(--bg-base);
+}
+
+.command-center.hidden { display: none; }
+
+/* Sidebar */
+.cc-sidebar {
+    width: 240px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width 0.2s ease;
+    overflow: hidden;
+}
+
+.cc-sidebar.collapsed {
+    width: 0;
+    border-right: none;
+}
+
+.cc-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cc-sidebar-toggle {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: flex;
+}
+
+.cc-sidebar-toggle:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.cc-card-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cc-sidebar-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    font-size: 12px;
+    color: var(--text-primary);
+    transition: background 0.15s ease;
+}
+
+.cc-sidebar-card:hover {
+    background: var(--bg-hover);
+}
+
+.cc-sidebar-card-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cc-add-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.cc-sidebar-card:hover .cc-add-btn { opacity: 1; }
+.cc-add-btn:hover { color: var(--accent); }
+
+.cc-sidebar-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* Grid */
+.cc-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-auto-rows: minmax(250px, 1fr);
+    gap: 1px;
+    background: var(--border);
+    overflow: auto;
+}
+
+.cc-grid.drag-over {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+}
+
+/* Tile */
+.cc-tile {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-base);
+    position: relative;
+}
+
+.cc-tile.maximized {
+    position: fixed;
+    inset: 44px 0 0 0;
+    z-index: var(--z-modal, 300);
+}
+
+.cc-tile-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    min-height: 32px;
+}
+
+.cc-tile-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cc-tile-model {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.cc-tile-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.cc-tile-header:hover .cc-tile-actions { opacity: 1; }
+
+.cc-tile-actions button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: flex;
+}
+
+.cc-tile-actions button:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.cc-tile-terminal {
+    flex: 1;
+    background: var(--terminal-bg);
+    overflow: hidden;
+}
+
+/* Empty state */
+.cc-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.cc-empty.hidden { display: none; }
+
+.cc-empty h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.cc-empty p {
+    font-size: 13px;
+    margin: 0;
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 1024px) {
@@ -2087,6 +2309,15 @@ dialog textarea {
     .drawer {
         width: 100%;
     }
+
+    .cc-sidebar {
+        width: 100%;
+        max-height: 30vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .command-center { flex-direction: column; }
+    .cc-grid { grid-template-columns: 1fr; }
 }
 
 /* --- Reduced Motion --- */

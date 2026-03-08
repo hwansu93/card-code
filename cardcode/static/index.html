@@ -42,6 +42,9 @@
             <button id="theme-toggle" class="btn btn-icon" title="Switch between light and dark theme">
                 <i data-lucide="sun-moon"></i>
             </button>
+            <button id="view-toggle" class="btn btn-icon" title="Command Center" aria-label="Toggle Command Center">
+                <i data-lucide="layout-grid"></i>
+            </button>
             <button id="settings-btn" class="btn btn-icon" title="Settings">
                 <i data-lucide="settings"></i>
             </button>
@@ -85,6 +88,24 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </main>
+
+        <main class="command-center hidden" id="command-center">
+            <div class="cc-sidebar" id="cc-sidebar">
+                <div class="cc-sidebar-header">
+                    <span>Sessions</span>
+                    <button class="cc-sidebar-toggle" id="cc-sidebar-toggle" aria-label="Toggle sidebar">
+                        <i data-lucide="panel-left-close"></i>
+                    </button>
+                </div>
+                <div class="cc-card-list" id="cc-card-list"></div>
+            </div>
+            <div class="cc-grid" id="cc-grid"></div>
+            <div class="cc-empty" id="cc-empty">
+                <i data-lucide="layout-grid"></i>
+                <h3>Command Center</h3>
+                <p>Drag cards from the sidebar or click + to add terminal tiles</p>
             </div>
         </main>
 
