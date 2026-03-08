@@ -1,7 +1,7 @@
 /* ============================================================
    CardCode — Design System
    Dense, tool-forward, professional. Linear/IDE-inspired.
-   Warm amber identity with translucent layered surfaces.
+   Copper & Slate identity — OKLCH material palette
    ============================================================ */
 
 /* --- Reset + Base --- */
@@ -99,7 +99,7 @@ a:focus-visible {
     --text-primary:   oklch(90% 0.008 250);
     --text-secondary: oklch(62% 0.008 250);
     --text-muted:     oklch(42% 0.008 250);
-    --text-on-accent: oklch(12% 0.015 250);
+    --text-on-accent: oklch(98% 0.004 250);
 
     /* Primary Accent — Copper (hue 55) */
     --accent:        oklch(68% 0.14 55);
@@ -431,14 +431,14 @@ a:focus-visible {
 .btn-primary {
     background: var(--accent);
     border-color: var(--accent);
-    color: #faf5f0;
+    color: var(--text-on-accent);
     font-weight: 600;
 }
 
 .btn-primary:hover {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
-    color: #faf5f0;
+    color: var(--text-on-accent);
 }
 
 .btn-primary:active {
@@ -1436,7 +1436,7 @@ dialog textarea {
     height: 14px;
     padding: 0 3px;
     background: var(--accent);
-    color: #faf5f0;
+    color: var(--text-on-accent);
     font-size: 9px;
     font-weight: 700;
     border-radius: 99px;
@@ -2148,7 +2148,7 @@ dialog textarea {
 
 .btn-danger {
     background: var(--color-error);
-    color: #faf5f0;
+    color: var(--text-on-accent);
     border: 1px solid var(--color-error);
     font-weight: 600;
 }

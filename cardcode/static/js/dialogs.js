@@ -396,8 +396,8 @@ function getTerminalTheme() {
     return {
         background: style.getPropertyValue('--terminal-bg').trim() || '#0f1014',
         foreground: style.getPropertyValue('--terminal-fg').trim() || '#e8e6e3',
-        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#e5853d',
-        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(229, 133, 61, 0.3)',
+        cursor: style.getPropertyValue('--terminal-cursor').trim() || '#4daa90',
+        selectionBackground: style.getPropertyValue('--terminal-selection').trim() || 'rgba(77, 170, 144, 0.3)',
         black: '#1a1c24',
         red: '#ef4444',
         green: '#4ade80',
