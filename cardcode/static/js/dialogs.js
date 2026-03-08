@@ -393,6 +393,7 @@ let searchAddon = null;
 let fetchController = null;
 let autoRefreshInterval = null;
 let currentInspectorCardId = null;
+let closeTimeout = null;
 
 function getTerminalTheme() {
     const style = getComputedStyle(document.documentElement);
@@ -615,9 +616,10 @@ function setupInspector() {
         }
         currentInspectorCardId = null;
 
-        setTimeout(() => {
+        closeTimeout = setTimeout(() => {
             disposeXterm();
             panel.classList.add('collapsed');
+            closeTimeout = null;
         }, 280);
     }
 
@@ -627,6 +629,20 @@ function setupInspector() {
     };
 
     function openInspector(cardId, cardTitle, helpers) {
+        // Cancel any pending close timeout to prevent race condition
+        if (closeTimeout) {
+            clearTimeout(closeTimeout);
+            closeTimeout = null;
+        }
+
+        // Dispose xterm if close didn't finish its cleanup
+        if (term) {
+            term.dispose();
+            term = null;
+            fitAddon = null;
+            searchAddon = null;
+        }
+
         // Deselect previous card
         if (currentInspectorCardId) {
             const prev = document.querySelector(`[data-card-id="${currentInspectorCardId}"]`);
