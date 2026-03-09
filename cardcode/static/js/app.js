@@ -107,7 +107,6 @@ async function init() {
     // These modules are created in later tasks — use dynamic import so app works without them
     import('./dialogs.js').then(m => m.setupDialogs()).catch(err => debugError('Failed to load dialogs:', err));
     import('./websocket.js').then(m => m.connectWebSocket()).catch(err => debugError('Failed to load websocket:', err));
-    import('./keyboard.js').then(m => m.setupKeyboard()).catch(err => debugError('Failed to load keyboard:', err));
     import('./notifications.js').then(m => m.setupNotifications()).catch(err => debugError('Failed to load notifications:', err));
     import('./command-center.js').then(m => m.setupCommandCenter()).catch(err => debugError('Failed to load command center:', err));
 }
