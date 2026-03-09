@@ -6,6 +6,10 @@ import { showConfirmDialog, debugError } from './utils.js';
 
 const COLLAPSE_KEY = 'cardcode-collapsed-columns';
 
+let _dragInProgress = false;
+export function isDragging() { return _dragInProgress; }
+let sortableInstances = [];
+
 function getCollapsedColumns() {
     try {
         return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}');
@@ -184,6 +188,8 @@ export function renderBoard(cards) {
 
     // Re-render Lucide icons scoped to board
     if (typeof lucide !== 'undefined') lucide.createIcons({ root: board });
+
+    setupSortable();
 }
 
 function startRename(col, nameEl) {
@@ -202,7 +208,6 @@ function startRename(col, nameEl) {
                     // Re-fetch columns to stay in sync
                     state.columns = await apiGet('/columns');
                     renderBoard(state.cards);
-                    setupSortable();
                 } catch (err) {
                     debugError('Rename failed:', err);
                     showToast({ title: 'Failed to rename column', message: 'Check your connection and try again', type: 'error' });
@@ -267,7 +272,6 @@ function showColumnMenu(col, anchorEl, cardCount) {
             state.columns = await apiGet('/columns');
             state.cards = await apiGet('/cards');
             renderBoard(state.cards);
-            setupSortable();
         } catch (err) {
             debugError('Delete column failed:', err);
             showToast({ title: 'Failed to delete column', message: 'Check your connection and try again', type: 'error' });
@@ -309,7 +313,6 @@ function showAddColumnInput(addBtn) {
             await apiPost('/columns', { name });
             state.columns = await apiGet('/columns');
             renderBoard(state.cards);
-            setupSortable();
         } catch (err) {
             debugError('Add column failed:', err);
             showToast({ title: 'Failed to create column', message: 'Check your connection and try again', type: 'error' });
@@ -361,21 +364,27 @@ export function updateColumnCounts() {
 }
 
 export function setupSortable() {
+    sortableInstances.forEach(s => s.destroy());
+    sortableInstances.length = 0;
+
     const columns = state.columns || [];
 
     // Card sorting within/between columns
     columns.forEach(col => {
         const el = document.getElementById(`col-${col.name}`);
         if (!el) return;
-        new Sortable(el, {
+        sortableInstances.push(new Sortable(el, {
             group: 'cards',
             animation: 200,
             ghostClass: 'card-ghost',
             dragClass: 'card-drag',
-            handle: '.card',
-            delay: 150,
-            delayOnTouchOnly: false,
+            delay: 80,
+            delayOnTouchOnly: true,
+            onStart: () => {
+                _dragInProgress = true;
+            },
             onEnd: async (evt) => {
+                setTimeout(() => { _dragInProgress = false; }, 50);
                 const cardId = evt.item.dataset.cardId;
                 const newColumn = evt.to.id.replace('col-', '');
                 // Remove empty placeholder if present in target
@@ -429,13 +438,13 @@ export function setupSortable() {
                     renderBoard(state.cards);
                 }
             },
-        });
+        }));
     });
 
     // Column reorder via header drag
     const board = document.getElementById('board');
     if (board) {
-        new Sortable(board, {
+        sortableInstances.push(new Sortable(board, {
             animation: 200,
             handle: '.column-header',
             draggable: '.column',
@@ -459,7 +468,7 @@ export function setupSortable() {
                     renderBoard(state.cards);
                 }
             },
-        });
+        }));
     }
 }
 

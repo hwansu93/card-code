@@ -1,4 +1,4 @@
-import { renderBoard, setupSortable, updateColumnCounts, updateEmptyState } from './board.js';
+import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
 import { debugError } from './utils.js';
 
 // Shared namespace for inter-module communication (replaces window.__ globals)
@@ -66,7 +66,6 @@ async function init() {
     renderBoard(state.cards);
     updateColumnCounts();
     updateEmptyState();
-    setupSortable();
 
     // Render Lucide icons scoped to document body
     if (typeof lucide !== 'undefined') lucide.createIcons({ root: document.body });

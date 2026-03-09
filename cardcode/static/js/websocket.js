@@ -1,6 +1,6 @@
 import { state, apiGet } from './app.js';
 import { debugWarn, debugError } from './utils.js';
-import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, updateColumnCounts, setupSortable } from './board.js';
+import { updateCardInPlace, addCardToBoard, removeCardFromBoard, renderBoard, updateColumnCounts } from './board.js';
 
 export function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -117,7 +117,6 @@ export function connectWebSocket() {
                 state.cards = await apiGet('/cards');
                 renderBoard(state.cards);
                 updateColumnCounts();
-                setupSortable();
                 break;
 
             case 'projects_refreshed':

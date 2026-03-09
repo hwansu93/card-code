@@ -1,5 +1,5 @@
 import { state, apiPatch, apiPost, CardCode } from './app.js';
-import { renderBoard, updateColumnCounts, updateEmptyState } from './board.js';
+import { renderBoard, updateColumnCounts, updateEmptyState, isDragging } from './board.js';
 import { escapeHtml, showConfirmDialog, debugError } from './utils.js';
 import { showToast } from './notifications.js';
 
@@ -65,6 +65,7 @@ export function createCardElement(card) {
 
     // Card click handler — open inspector panel for all cards
     el.addEventListener('click', () => {
+        if (isDragging()) return;
         CardCode.openTerminalViewer?.(card.id, card.title);
     });
 
