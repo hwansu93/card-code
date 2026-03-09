@@ -545,15 +545,23 @@ a:focus-visible {
 }
 
 .column-header {
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky, 10);
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
     margin: 6px 6px 0;
-    background: var(--border-translucent);
+    background: oklch(from var(--bg-secondary) l c h / 0.8);
     border-radius: var(--radius);
     border-bottom: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="light"] .column-header {
+    background: oklch(from var(--bg-secondary) l c h / 0.85);
 }
 
 .column-header h2 {
@@ -835,15 +843,20 @@ a:focus-visible {
     padding: 10px 12px 6px;
     cursor: pointer;
     position: relative;
-    transition: background var(--transition-normal) var(--ease-standard), border-color var(--transition-normal) var(--ease-standard);
+    transition: filter var(--transition-fast) var(--ease-out-quart),
+                transform var(--transition-fast) var(--ease-out-quart);
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
 .card:hover {
-    background: var(--bg-elevated);
-    border-color: var(--border-focus);
+    filter: brightness(1.06);
+}
+
+.card:active {
+    filter: brightness(0.92);
+    transform: scale(0.97);
 }
 
 .card.selected {
@@ -2390,5 +2403,13 @@ dialog textarea {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .card {
+        transition: none;
+    }
+
+    .card:active {
+        transform: none;
     }
 }
