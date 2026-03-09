@@ -810,6 +810,26 @@ a:focus-visible {
     box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
+/* Quick-add inline input */
+.quick-add-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    outline: none;
+    margin-top: 6px;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.quick-add-input::placeholder {
+    color: var(--text-muted);
+}
+
 /* Column ghost state during reorder */
 .column-ghost {
     opacity: 0.4;

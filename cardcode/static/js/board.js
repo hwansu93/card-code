@@ -190,6 +190,13 @@ export function renderBoard(cards) {
             });
         }
 
+        // Double-click on empty space in the column body → inline quick-add
+        body.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.card')) return;
+            if (body.querySelector('.quick-add-input')) return;
+            showQuickAddInput(body, col.name);
+        });
+
         colEl.appendChild(header);
         colEl.appendChild(body);
 
@@ -404,6 +411,44 @@ function showAddColumnInput(addBtn) {
     form.appendChild(input);
     addBtn.replaceWith(form);
     input.focus();
+}
+
+function showQuickAddInput(container, columnName) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'quick-add-input';
+    input.placeholder = 'Add a card\u2026';
+    container.appendChild(input);
+    input.focus();
+
+    const createCard = async () => {
+        const title = input.value.trim();
+        if (!title) return;
+        input.value = '';
+        try {
+            await apiPost('/cards', { title, column_name: columnName });
+            // WebSocket card_created event will call addCardToBoard — input stays open for multi-entry
+        } catch (err) {
+            debugError('Quick-add failed:', err);
+        }
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            createCard();
+        } else if (e.key === 'Escape') {
+            input.remove();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => {
+            if (document.activeElement !== input) {
+                input.remove();
+            }
+        }, 150);
+    });
 }
 
 export function updateEmptyState() {
