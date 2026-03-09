@@ -469,9 +469,7 @@ function getOrCreateTerminal(cardId) {
         term.loadAddon(searchAddon);
     }
 
-    term.open(container);
-
-    const entry = { term, fitAddon, searchAddon, container };
+    const entry = { term, fitAddon, searchAddon, container, opened: false };
     terminalCache.set(cardId, entry);
     return entry;
 }
@@ -490,6 +488,11 @@ function showCachedTerminal(cardId, parentElement) {
     }
 
     entry.container.style.display = '';
+
+    if (!entry.opened) {
+        entry.term.open(entry.container);
+        entry.opened = true;
+    }
 
     // Fit after showing
     requestAnimationFrame(() => {

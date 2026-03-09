@@ -443,8 +443,9 @@ function showQuickAddInput(container, columnName) {
     });
 
     input.addEventListener('blur', () => {
-        setTimeout(() => {
+        setTimeout(async () => {
             if (document.activeElement !== input) {
+                await createCard();
                 input.remove();
             }
         }, 150);
