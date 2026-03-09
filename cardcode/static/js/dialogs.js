@@ -509,6 +509,58 @@ function setupInspector() {
         autoRefreshCheckbox.checked = savedAutoRefresh === 'true';
     }
 
+    // ── Resize handle ──────────────────────────────────────────────
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'panel-resize-handle';
+    panel.appendChild(resizeHandle);
+
+    const MIN_WIDTH = 300;
+    const MAX_WIDTH = 700;
+
+    // Load saved width
+    const savedWidth = localStorage.getItem('cardcode-panel-width');
+    if (savedWidth) {
+        document.documentElement.style.setProperty('--panel-width', savedWidth + 'px');
+    }
+
+    let isDragging = false;
+    let startX, startWidth;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startWidth = panel.getBoundingClientRect().width;
+        resizeHandle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        // Panel is on the right, so dragging left = wider
+        const delta = startX - e.clientX;
+        const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+        document.documentElement.style.setProperty('--panel-width', newWidth + 'px');
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        resizeHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        // Save width
+        const width = panel.getBoundingClientRect().width;
+        localStorage.setItem('cardcode-panel-width', Math.round(width));
+
+        // Refit terminal
+        if (currentInspectorCardId && terminalCache.has(currentInspectorCardId)) {
+            try { terminalCache.get(currentInspectorCardId).fitAddon.fit(); } catch(e) {}
+        }
+    });
+
     closeBtn.addEventListener('click', () => closeInspector());
     // Scrim click closes inspector on mobile (hidden on desktop via CSS)
     scrim.addEventListener('click', () => closeInspector());
