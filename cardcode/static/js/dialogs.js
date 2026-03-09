@@ -418,6 +418,12 @@ let autoRefreshInterval = null;
 let currentInspectorCardId = null;
 let closeTimeout = null;
 
+const FONT_SIZE_KEY = 'cardcode-terminal-font-size';
+const FONT_SIZE_DEFAULT = 14;
+const FONT_SIZE_MIN = 10;
+const FONT_SIZE_MAX = 20;
+let currentFontSize = parseInt(localStorage.getItem(FONT_SIZE_KEY)) || FONT_SIZE_DEFAULT;
+
 function getOrCreateTerminal(cardId) {
     if (terminalCache.has(cardId)) {
         const cached = terminalCache.get(cardId);
@@ -443,7 +449,7 @@ function getOrCreateTerminal(cardId) {
         cursorBlink: false,
         cursorStyle: 'bar',
         disableStdin: true,
-        fontSize: 13,
+        fontSize: currentFontSize,
         fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
         lineHeight: 1.4,
         scrollback: 5000,
@@ -576,6 +582,27 @@ function setupInspector() {
         } else {
             stopAutoRefresh();
         }
+    });
+
+    function applyFontSize(size) {
+        currentFontSize = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, size));
+        localStorage.setItem(FONT_SIZE_KEY, currentFontSize);
+
+        for (const [, entry] of terminalCache) {
+            entry.term.options.fontSize = currentFontSize;
+        }
+
+        if (currentInspectorCardId && terminalCache.has(currentInspectorCardId)) {
+            try { terminalCache.get(currentInspectorCardId).fitAddon.fit(); } catch(e) {}
+        }
+    }
+
+    document.getElementById('font-size-up').addEventListener('click', () => {
+        applyFontSize(currentFontSize + 1);
+    });
+
+    document.getElementById('font-size-down').addEventListener('click', () => {
+        applyFontSize(currentFontSize - 1);
     });
 
     promptInput.addEventListener('keydown', (e) => {
