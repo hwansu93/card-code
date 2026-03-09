@@ -374,7 +374,7 @@ async def create_column_endpoint(request: Request, body: ColumnCreate) -> Column
         assert row is not None
         position = row[0]
 
-        await create_column(db, col_id, body.name, position)
+        await create_column(db, col_id, body.name, position, color=body.color)
 
         row_data = await _get_column_or_404(db, col_id)
         col = Column(**row_data)
@@ -398,7 +398,7 @@ async def update_column_endpoint(request: Request, column_id: str, body: ColumnU
             raise HTTPException(status_code=400, detail="No fields to update")
 
         try:
-            await update_column(db, column_id, name=body.name, position=body.position)
+            await update_column(db, column_id, name=body.name, position=body.position, color=body.color)
         except IntegrityError:
             raise HTTPException(status_code=409, detail="Column name already exists")
 

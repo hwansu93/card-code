@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS columns (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     position REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    color TEXT
 );
 """
 
@@ -88,6 +89,12 @@ async def init_db(db_path: Path) -> None:
         except Exception:
             pass  # Column already exists
 
+        # Migrate: add color column to columns table if missing
+        try:
+            await db.execute("ALTER TABLE columns ADD COLUMN color TEXT")
+        except Exception:
+            pass  # Column already exists
+
         await db.commit()
 
 
@@ -112,19 +119,25 @@ async def get_column_by_name(db: aiosqlite.Connection, name: str) -> aiosqlite.R
     return await cursor.fetchone()
 
 
-async def create_column(db: aiosqlite.Connection, id: str, name: str, position: float) -> None:
+async def create_column(
+    db: aiosqlite.Connection, id: str, name: str, position: float, color: str | None = None
+) -> None:
     """Insert a new column."""
     await db.execute(
-        "INSERT INTO columns (id, name, position) VALUES (?, ?, ?)",
-        (id, name, position),
+        "INSERT INTO columns (id, name, position, color) VALUES (?, ?, ?, ?)",
+        (id, name, position, color),
     )
     await db.commit()
 
 
 async def update_column(
-    db: aiosqlite.Connection, id: str, name: str | None = None, position: float | None = None
+    db: aiosqlite.Connection,
+    id: str,
+    name: str | None = None,
+    position: float | None = None,
+    color: str | None = None,
 ) -> None:
-    """Update a column's name and/or position."""
+    """Update a column's name and/or position and/or color."""
     updates = []
     params: list[Any] = []
     if name is not None:
@@ -133,6 +146,9 @@ async def update_column(
     if position is not None:
         updates.append("position = ?")
         params.append(position)
+    if color is not None:
+        updates.append("color = ?")
+        params.append(color)
     if not updates:
         return
     params.append(id)

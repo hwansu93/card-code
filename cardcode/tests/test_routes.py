@@ -321,3 +321,35 @@ async def test_terminal_output_preserves_ansi(mock_tmux_cls, client):
     assert "\x1b[32m" in data["output"]
     assert "\x1b[1;31m" in data["output"]
     assert data["output"] == ansi_output
+
+
+@pytest.mark.asyncio
+async def test_create_column_with_color(client):
+    resp = await client.post("/api/columns", json={"name": "colored", "color": "#ff5500"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["name"] == "colored"
+    assert data["color"] == "#ff5500"
+
+
+@pytest.mark.asyncio
+async def test_create_column_without_color_returns_null(client):
+    resp = await client.post("/api/columns", json={"name": "no-color"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["color"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_column_color(client):
+    resp = await client.get("/api/columns")
+    col = resp.json()[0]
+
+    resp = await client.patch(f"/api/columns/{col['id']}", json={"color": "#aabbcc"})
+    assert resp.status_code == 200
+    assert resp.json()["color"] == "#aabbcc"
+
+    # Verify it persists on list
+    resp = await client.get("/api/columns")
+    updated = next(c for c in resp.json() if c["id"] == col["id"])
+    assert updated["color"] == "#aabbcc"

@@ -95,16 +95,19 @@ class Column(BaseModel):
     name: str
     position: float
     created_at: str
+    color: str | None = None
     model_config = {"from_attributes": True}
 
 
 class ColumnCreate(BaseModel):
     name: str = Field(min_length=1, max_length=50)
+    color: str | None = None
 
 
 class ColumnUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=50)
     position: float | None = None
+    color: str | None = None
 
 
 class QueuedPrompt(BaseModel):
