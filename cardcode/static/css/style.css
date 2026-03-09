@@ -512,9 +512,10 @@ a:focus-visible {
 /* --- App Layout --- */
 
 .app-layout {
-    display: flex;
-    height: 100vh;
-    padding-top: 44px;
+    display: grid;
+    grid-template-columns: 1fr var(--panel-width, 420px);
+    height: calc(100vh - 44px);
+    margin-top: 44px;
 }
 
 /* --- Board --- */
@@ -524,7 +525,7 @@ a:focus-visible {
     display: flex;
     gap: 8px;
     padding: 12px;
-    flex: 1;
+    grid-column: 1;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1654,44 +1655,54 @@ dialog textarea {
     to { opacity: 1; }
 }
 
-/* ── Inspector Panel (Overlay) ── */
+/* ── Inspector Panel (Persistent Split) ── */
 .inspector-panel {
-    position: fixed;
-    top: 44px;
-    right: 0;
-    bottom: 0;
-    width: 500px;
-    background: var(--bg-secondary);
-    border-left: 1px solid var(--border);
+    grid-column: 2;
     display: flex;
     flex-direction: column;
-    z-index: var(--z-drawer, 200);
-    transform: translateX(100%);
-    transition: transform var(--transition-slow) var(--ease-standard);
+    border-left: 1px solid var(--border);
+    background: var(--bg-secondary);
+    overflow: hidden;
 }
 
-.inspector-panel.open {
-    transform: translateX(0);
+.inspector-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
-.inspector-panel.collapsed {
-    transform: translateX(100%);
+.inspector-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .inspector-scrim {
-    position: fixed;
-    inset: 0;
-    top: 44px;
-    background: var(--scrim);
-    z-index: calc(var(--z-drawer, 200) - 1);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--transition-slow) var(--ease-standard);
+    display: none; /* hidden on desktop */
 }
 
-.inspector-scrim.visible {
-    opacity: 1;
-    pointer-events: auto;
+@media (max-width: 1024px) {
+    .inspector-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        top: 44px;
+        background: var(--scrim);
+        z-index: calc(var(--z-drawer, 200) - 1);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--transition-slow) var(--ease-standard);
+    }
+
+    .inspector-scrim.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
 /* Header */
@@ -1890,7 +1901,29 @@ dialog textarea {
     background: var(--accent-hover);
 }
 
-/* Mobile */
+/* Mobile — inspector falls back to slide-in overlay */
+@media (max-width: 1024px) {
+    .app-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .inspector-panel {
+        position: fixed;
+        right: 0;
+        top: 44px;
+        bottom: 0;
+        width: min(420px, 85vw);
+        transform: translateX(100%);
+        transition: transform var(--transition-slow) var(--ease-out-quart);
+        z-index: var(--z-overlay, 150);
+        grid-column: unset;
+    }
+
+    .inspector-panel.open {
+        transform: translateX(0);
+    }
+}
+
 @media (max-width: 768px) {
     .inspector-panel {
         width: 100%;
@@ -1904,9 +1937,6 @@ dialog textarea {
     }
     .inspector-panel.open {
         transform: translateY(0);
-    }
-    .inspector-panel.collapsed {
-        transform: translateY(100%);
     }
 }
 
@@ -2079,7 +2109,7 @@ dialog textarea {
     outline-offset: 2px;
 }
 
-/* (inspector-panel.collapsed is defined above in the main inspector block) */
+/* (inspector-panel overlay behavior defined in @media (max-width: 1024px) block) */
 
 /* --- Board Loading / Error States --- */
 
@@ -2153,8 +2183,10 @@ dialog textarea {
 .command-center {
     position: relative;
     display: flex;
-    height: calc(100vh - 44px);
+    grid-column: 1;
     background: var(--bg-base);
+    min-height: 0;
+    overflow: hidden;
 }
 
 .command-center.hidden { display: none; }
@@ -2375,10 +2407,6 @@ dialog textarea {
 /* --- Responsive --- */
 
 @media (max-width: 1024px) {
-    .inspector-panel {
-        width: 420px;
-    }
-
     .onboarding-actions {
         flex-direction: column;
     }
@@ -2389,12 +2417,7 @@ dialog textarea {
 }
 
 @media (max-width: 768px) {
-    .app-layout {
-        flex-direction: column;
-    }
-
     .board {
-        flex: 1;
         min-height: 0;
     }
 

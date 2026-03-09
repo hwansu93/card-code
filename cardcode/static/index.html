@@ -106,41 +106,46 @@
             </div>
         </main>
 
-        <aside class="inspector-panel collapsed" id="inspector-panel">
-            <div class="inspector-header">
-                <div class="inspector-header-left">
-                    <span class="inspector-title" id="inspector-title">No card selected</span>
-                    <span class="inspector-meta" id="inspector-meta"></span>
-                </div>
-                <div class="inspector-header-right">
-                    <button class="inspector-btn" id="inspector-refresh" aria-label="Refresh" title="Refresh">
-                        <i data-lucide="refresh-cw"></i>
-                    </button>
-                    <label class="auto-refresh-toggle" title="Auto-refresh">
-                        <input type="checkbox" id="inspector-auto-refresh" checked>
-                        <i data-lucide="radio"></i>
-                    </label>
-                    <button class="inspector-btn inspector-close" id="inspector-close" aria-label="Close" title="Close">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
+        <aside class="inspector-panel" id="inspector-panel">
+            <div class="inspector-empty" id="inspector-empty">
+                <span>Select a card to inspect</span>
             </div>
-            <div class="inspector-terminal" id="inspector-terminal">
-                <div id="terminal-xterm-container"></div>
-                <div class="terminal-loading" id="terminal-loading">
-                    <i data-lucide="loader-2" class="spin"></i>
-                    <span>Loading terminal output...</span>
+            <div class="inspector-content" id="inspector-content" style="display:none">
+                <div class="inspector-header">
+                    <div class="inspector-header-left">
+                        <span class="inspector-title" id="inspector-title">No card selected</span>
+                        <span class="inspector-meta" id="inspector-meta"></span>
+                    </div>
+                    <div class="inspector-header-right">
+                        <button class="inspector-btn" id="inspector-refresh" aria-label="Refresh" title="Refresh">
+                            <i data-lucide="refresh-cw"></i>
+                        </button>
+                        <label class="auto-refresh-toggle" title="Auto-refresh">
+                            <input type="checkbox" id="inspector-auto-refresh" checked>
+                            <i data-lucide="radio"></i>
+                        </label>
+                        <button class="inspector-btn inspector-close" id="inspector-close" aria-label="Close" title="Close">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="terminal-empty" id="terminal-empty">
-                    <i data-lucide="terminal"></i>
-                    <span>No active session</span>
+                <div class="inspector-terminal" id="inspector-terminal">
+                    <div id="terminal-xterm-container"></div>
+                    <div class="terminal-loading" id="terminal-loading">
+                        <i data-lucide="loader-2" class="spin"></i>
+                        <span>Loading terminal output...</span>
+                    </div>
+                    <div class="terminal-empty" id="terminal-empty">
+                        <i data-lucide="terminal"></i>
+                        <span>No active session</span>
+                    </div>
                 </div>
-            </div>
-            <div class="inspector-input" id="inspector-input">
-                <input type="text" id="terminal-prompt-input" placeholder="Send a message to the session..." autocomplete="off">
-                <button id="terminal-prompt-send" aria-label="Send">
-                    <i data-lucide="send"></i>
-                </button>
+                <div class="inspector-input" id="inspector-input">
+                    <input type="text" id="terminal-prompt-input" placeholder="Send a message to the session..." autocomplete="off">
+                    <button id="terminal-prompt-send" aria-label="Send">
+                        <i data-lucide="send"></i>
+                    </button>
+                </div>
             </div>
         </aside>
         <div class="inspector-scrim" id="inspector-scrim"></div>

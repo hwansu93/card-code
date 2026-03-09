@@ -477,6 +477,7 @@ function setupInspector() {
     }
 
     closeBtn.addEventListener('click', () => closeInspector());
+    // Scrim click closes inspector on mobile (hidden on desktop via CSS)
     scrim.addEventListener('click', () => closeInspector());
 
     refreshBtn.addEventListener('click', () => {
@@ -506,7 +507,7 @@ function setupInspector() {
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && panel.classList.contains('open')) {
+        if (e.key === 'Escape' && currentInspectorCardId) {
             closeInspector();
         }
     });
@@ -610,8 +611,6 @@ function setupInspector() {
     }
 
     function closeInspector() {
-        panel.classList.remove('open');
-        scrim.classList.remove('visible');
         stopAutoRefresh();
         if (fetchController) fetchController.abort();
 
@@ -621,12 +620,33 @@ function setupInspector() {
             if (prev) prev.classList.remove('selected');
         }
         currentInspectorCardId = null;
+        state.selectedCardId = null;
 
-        closeTimeout = setTimeout(() => {
+        // On mobile: slide out and hide scrim
+        if (window.innerWidth <= 1024) {
+            panel.classList.remove('open');
+            scrim.classList.remove('visible');
+            closeTimeout = setTimeout(() => {
+                disposeXterm();
+                showEmptyState();
+                closeTimeout = null;
+            }, 300);
+        } else {
+            // On desktop: show empty state immediately, dispose terminal
             disposeXterm();
-            panel.classList.add('collapsed');
-            closeTimeout = null;
-        }, 280);
+            showEmptyState();
+        }
+    }
+
+    function showEmptyState() {
+        document.getElementById('inspector-empty').style.display = '';
+        document.getElementById('inspector-content').style.display = 'none';
+    }
+
+    function showInspectorContent() {
+        document.getElementById('inspector-empty').style.display = 'none';
+        document.getElementById('inspector-content').style.display = 'flex';
+        document.getElementById('inspector-content').style.flexDirection = 'column';
     }
 
     // Expose globally for card click handler
@@ -641,7 +661,7 @@ function setupInspector() {
             closeTimeout = null;
         }
 
-        // Dispose xterm if close didn't finish its cleanup
+        // Dispose xterm if switching cards or close didn't finish cleanup
         if (term) {
             term.dispose();
             term = null;
@@ -672,14 +692,21 @@ function setupInspector() {
         const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
         if (cardEl) cardEl.classList.add('selected');
 
-        // Show panel and scrim
-        panel.classList.remove('collapsed');
-        panel.classList.add('open');
-        scrim.classList.add('visible');
+        // Show content area (hide empty state)
+        showInspectorContent();
+
+        // On mobile: slide in and show scrim
+        if (window.innerWidth <= 1024) {
+            panel.classList.add('open');
+            scrim.classList.add('visible');
+        }
 
         const terminalArea = document.getElementById('inspector-terminal');
         const inputBar = document.getElementById('inspector-input');
         const hasSession = card && (card.tmux_session || card.session_status === 'alive' || card.session_status === 'waiting');
+        const isMobile = window.innerWidth <= 1024;
+        // On mobile, delay terminal init to let slide animation finish
+        const initDelay = isMobile ? 280 : 0;
 
         if (hasSession) {
             inputBar.classList.remove('hidden');
@@ -689,7 +716,7 @@ function setupInspector() {
             setTimeout(() => {
                 initXterm();
                 helpers.loadTerminalOutput(cardId);
-            }, 280);
+            }, initDelay);
 
             if (autoRefreshCheckbox.checked) {
                 helpers.startAutoRefresh(cardId);
@@ -703,7 +730,7 @@ function setupInspector() {
                     term.write(card.last_output.replace(/\r?\n/g, '\r\n'));
                     term.write('\r\n\r\n--- Session has ended ---');
                 }
-            }, 280);
+            }, initDelay);
         } else {
             inputBar.classList.add('hidden');
             terminalArea.classList.remove('loading');
