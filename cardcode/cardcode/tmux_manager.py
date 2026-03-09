@@ -24,20 +24,22 @@ class TmuxManager:
     def list_sessions(self) -> list[dict]:
         """List all tmux sessions that have a claude process in any pane."""
         result = subprocess.run(
-            self._cmd("list-panes", "-a", "-F", "#{session_name} #{pane_current_command}"),
+            self._cmd("list-panes", "-a", "-F", "#{session_name} #{pane_current_command} #{pane_current_path}"),
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
             return []
-        claude_sessions: dict[str, bool] = {}
+        claude_sessions: dict[str, dict] = {}
         for line in result.stdout.strip().splitlines():
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                session_name, command = parts
+            parts = line.split(None, 2)
+            if len(parts) >= 2:
+                session_name = parts[0]
+                command = parts[1]
+                pane_path = parts[2] if len(parts) == 3 else ""
                 if "claude" in command.lower():
-                    claude_sessions[session_name] = True
-        return [{"name": name} for name in claude_sessions]
+                    claude_sessions[session_name] = {"name": session_name, "pane_current_path": pane_path}
+        return list(claude_sessions.values())
 
     def list_external_claude_processes(self) -> list[dict]:
         """Find Claude Code processes not running in any tmux session."""

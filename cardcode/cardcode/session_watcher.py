@@ -17,40 +17,44 @@ from cardcode.tmux_manager import TmuxManager
 logger = logging.getLogger(__name__)
 
 
-def parse_jsonl_metrics(jsonl_path: Path) -> dict:
-    """Parse the latest cost metrics from a Claude Code JSONL file."""
-    result = {
-        "cost_usd": 0.0,
+def parse_jsonl_metrics(path: str | Path) -> dict:
+    """Parse Claude Code JSONL for token counts and context percentage."""
+    metrics = {
         "input_tokens": 0,
         "output_tokens": 0,
-        "context_pct": 0.0,
+        "cost_usd": None,
+        "context_pct": None,
     }
+    try:
+        with open(path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
 
-    if not jsonl_path.exists():
-        return result
+                # Accumulate token usage from assistant entries
+                if entry.get("type") == "assistant":
+                    usage = entry.get("message", {}).get("usage", {})
+                    metrics["input_tokens"] += usage.get("input_tokens", 0)
+                    metrics["output_tokens"] += usage.get("output_tokens", 0)
 
-    text = jsonl_path.read_text().strip()
-    if not text:
-        return result
+                # Check for cost (may be null)
+                cost = entry.get("costUsd")
+                if cost is not None:
+                    metrics["cost_usd"] = (metrics["cost_usd"] or 0) + cost
 
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+                # Check for context percentage (take the latest non-null value)
+                ctx = entry.get("contextPercent")
+                if ctx is not None:
+                    metrics["context_pct"] = ctx
+    except Exception:
+        pass
 
-        if entry.get("type") == "cost":
-            result["cost_usd"] = entry.get("costUsd", result["cost_usd"])
-            result["input_tokens"] = entry.get("inputTokens", result["input_tokens"])
-            result["output_tokens"] = entry.get("outputTokens", result["output_tokens"])
-
-        if "contextPercent" in entry:
-            result["context_pct"] = entry["contextPercent"]
-
-    return result
+    return metrics
 
 
 def parse_pane_metrics(pane_text: str) -> dict:
@@ -160,65 +164,31 @@ def _session_name_to_title(session_name: str) -> str:
     return name.title()
 
 
-def _discover_jsonl(claude_dir: Path, project_path: str) -> Path | None:
-    """Try to find the most recent JSONL session file for a project.
-
-    Claude Code stores sessions under ~/.claude/projects/<hash>/sessions/.
-    We scan project dirs for one whose path matches, then return the newest .jsonl.
-    """
-    projects_dir = claude_dir / "projects"
-    if not projects_dir.is_dir():
+def _discover_jsonl(project_path: str) -> str | None:
+    """Find the newest JSONL file for a project path using Claude Code's directory naming."""
+    if not project_path:
         return None
 
-    # Normalise for comparison
-    norm_project = project_path.rstrip("/")
+    # Claude Code encodes paths: /foo/bar → -foo-bar
+    encoded = project_path.replace('/', '-')
+    if not encoded.startswith('-'):
+        encoded = '-' + encoded
 
-    for candidate in projects_dir.iterdir():
-        if not candidate.is_dir():
-            continue
+    claude_dir = Path.home() / '.claude' / 'projects' / encoded
+    if not claude_dir.exists():
+        return None
 
-        # Check for a config file that maps to the project path
-        for config_name in ("project.json", "config.json", ".project"):
-            config_file = candidate / config_name
-            if config_file.exists():
-                try:
-                    text = config_file.read_text().strip()
-                    if norm_project in text:
-                        return _newest_jsonl(candidate)
-                except Exception:
-                    continue
+    # Find newest .jsonl file directly in this directory
+    jsonl_files = sorted(
+        claude_dir.glob('*.jsonl'),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True
+    )
 
-        # Heuristic: directory name might encode the project path
-        # Claude uses a hash of the absolute path as the directory name
-        # Check CLAUDE.md or any file that references the project path
-        claude_md = candidate / "CLAUDE.md"
-        if claude_md.exists():
-            try:
-                if norm_project in claude_md.read_text():
-                    return _newest_jsonl(candidate)
-            except Exception:
-                pass
+    if jsonl_files:
+        return str(jsonl_files[0])
 
-    # Last resort: find the most recently modified .jsonl across all project dirs
-    # Only if there's a single active one (avoid false matches)
     return None
-
-
-def _newest_jsonl(project_dir: Path) -> Path | None:
-    """Return the most recently modified .jsonl file under a project dir."""
-    best: Path | None = None
-    best_mtime: float = 0
-
-    for jsonl in project_dir.rglob("*.jsonl"):
-        try:
-            mtime = jsonl.stat().st_mtime
-            if mtime > best_mtime:
-                best = jsonl
-                best_mtime = mtime
-        except OSError:
-            continue
-
-    return best
 
 
 async def watcher_loop(config: CardCodeConfig, ws_manager, interval: float = 5.0):
@@ -243,6 +213,8 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
         active_cards = [dict(row) for row in await cursor.fetchall()]
 
         sessions = tmux.list_sessions()
+        # Build a lookup from session name → pane_current_path for backfilling
+        session_path_map = {s["name"]: s.get("pane_current_path") for s in sessions}
 
         for card in active_cards:
             session_name = card["tmux_session"]
@@ -252,19 +224,29 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
             new_status = detect_session_status(pane_text, session_alive=is_alive)
             old_status = card.get("session_status")
 
+            # Backfill project_path from tmux if currently NULL
+            if not card.get("project_path"):
+                tmux_path = session_path_map.get(session_name)
+                if tmux_path:
+                    await db.execute(
+                        "UPDATE cards SET project_path = ? WHERE id = ?",
+                        (tmux_path, card["id"]),
+                    )
+                    card["project_path"] = tmux_path
+
             # Try to discover jsonl_path if not set
             if not card.get("jsonl_path") and card.get("project_path"):
-                discovered = _discover_jsonl(config.claude_dir, card["project_path"])
+                discovered = _discover_jsonl(card["project_path"])
                 if discovered:
                     await db.execute(
                         "UPDATE cards SET jsonl_path = ? WHERE id = ?",
-                        (str(discovered), card["id"]),
+                        (discovered, card["id"]),
                     )
-                    card["jsonl_path"] = str(discovered)
+                    card["jsonl_path"] = discovered
 
             metrics = {}
             if card.get("jsonl_path"):
-                metrics = parse_jsonl_metrics(Path(card["jsonl_path"]))
+                metrics = parse_jsonl_metrics(card["jsonl_path"])
 
             # Fall back to parsing metrics from pane text
             if not metrics and pane_text:
@@ -325,11 +307,12 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
             now = datetime.now(timezone.utc).isoformat()
             card_id = generate_ksuid()
             title = _session_name_to_title(session["name"])
+            project_path = session.get("pane_current_path") or None
             await db.execute(
                 """INSERT INTO cards (id, title, column_name, position, tmux_session,
-                   session_status, created_at, updated_at)
-                   VALUES (?, ?, 'active', 0, ?, 'alive', ?, ?)""",
-                (card_id, title, session["name"], now, now),
+                   project_path, session_status, started_at, created_at, updated_at)
+                   VALUES (?, ?, 'active', 0, ?, ?, 'alive', ?, ?, ?)""",
+                (card_id, title, session["name"], project_path, now, now, now),
             )
 
         # Auto-discover external (non-tmux) Claude processes
@@ -343,9 +326,9 @@ async def _poll_once(config: CardCodeConfig, tmux: TmuxManager, ws_manager):
             title = dir_name.replace("_", " ").replace("-", " ").title()
             await db.execute(
                 """INSERT INTO cards (id, title, column_name, position, session_id,
-                   project_path, session_status, is_external, created_at, updated_at)
-                   VALUES (?, ?, 'active', 0, ?, ?, 'alive', 1, ?, ?)""",
-                (card_id, title, str(ext["pid"]), ext.get("cwd"), now, now),
+                   project_path, session_status, is_external, started_at, created_at, updated_at)
+                   VALUES (?, ?, 'active', 0, ?, ?, 'alive', 1, ?, ?, ?)""",
+                (card_id, title, str(ext["pid"]), ext.get("cwd"), now, now, now),
             )
 
         await db.commit()

@@ -1,6 +1,5 @@
 import json
 import pytest
-from pathlib import Path
 
 from cardcode.session_watcher import parse_jsonl_metrics, detect_session_status
 
@@ -9,8 +8,8 @@ from cardcode.session_watcher import parse_jsonl_metrics, detect_session_status
 def jsonl_file(tmp_path):
     path = tmp_path / "session.jsonl"
     lines = [
-        {"type": "cost", "costUsd": 0.05, "inputTokens": 1000, "outputTokens": 500},
-        {"type": "cost", "costUsd": 0.12, "inputTokens": 2500, "outputTokens": 1200},
+        {"type": "assistant", "message": {"usage": {"input_tokens": 1000, "output_tokens": 500}}, "costUsd": 0.05},
+        {"type": "assistant", "message": {"usage": {"input_tokens": 1500, "output_tokens": 700}}, "costUsd": 0.12},
     ]
     path.write_text("\n".join(json.dumps(l) for l in lines))
     return path
@@ -18,7 +17,7 @@ def jsonl_file(tmp_path):
 
 def test_parse_jsonl_metrics(jsonl_file):
     metrics = parse_jsonl_metrics(jsonl_file)
-    assert metrics["cost_usd"] == pytest.approx(0.12)
+    assert metrics["cost_usd"] == pytest.approx(0.17)
     assert metrics["input_tokens"] == 2500
     assert metrics["output_tokens"] == 1200
 
@@ -27,7 +26,7 @@ def test_parse_jsonl_metrics_empty(tmp_path):
     path = tmp_path / "empty.jsonl"
     path.write_text("")
     metrics = parse_jsonl_metrics(path)
-    assert metrics["cost_usd"] == 0.0
+    assert metrics["cost_usd"] is None
     assert metrics["input_tokens"] == 0
     assert metrics["output_tokens"] == 0
 
@@ -35,7 +34,7 @@ def test_parse_jsonl_metrics_empty(tmp_path):
 def test_parse_jsonl_metrics_missing_file(tmp_path):
     path = tmp_path / "nope.jsonl"
     metrics = parse_jsonl_metrics(path)
-    assert metrics["cost_usd"] == 0.0
+    assert metrics["cost_usd"] is None
 
 
 def test_detect_session_status_alive():
