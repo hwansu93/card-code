@@ -411,21 +411,35 @@ function updateInspectorMeta(card) {
     metaEl.innerHTML = parts.join(' ');
 }
 
-let term = null;
-let fitAddon = null;
-let searchAddon = null;
+const terminalCache = new Map(); // cardId -> { term, fitAddon, searchAddon, container }
+const TERMINAL_CACHE_MAX = 5;
 let fetchController = null;
 let autoRefreshInterval = null;
 let currentInspectorCardId = null;
 let closeTimeout = null;
 
-function initXterm() {
-    if (term) return;
-    const container = document.getElementById('terminal-xterm-container');
-    if (!container) return;
-    container.innerHTML = '';
+function getOrCreateTerminal(cardId) {
+    if (terminalCache.has(cardId)) {
+        const cached = terminalCache.get(cardId);
+        // Move to end for LRU tracking
+        terminalCache.delete(cardId);
+        terminalCache.set(cardId, cached);
+        return cached;
+    }
 
-    term = new Terminal({
+    // Evict LRU if at capacity
+    if (terminalCache.size >= TERMINAL_CACHE_MAX) {
+        const [oldestId, oldest] = terminalCache.entries().next().value;
+        oldest.term.dispose();
+        oldest.container.remove();
+        terminalCache.delete(oldestId);
+    }
+
+    // Create new terminal instance
+    const container = document.createElement('div');
+    container.style.cssText = 'width:100%;height:100%;display:none';
+
+    const term = new Terminal({
         cursorBlink: false,
         cursorStyle: 'bar',
         disableStdin: true,
@@ -436,28 +450,47 @@ function initXterm() {
         theme: getTerminalTheme(),
     });
 
-    fitAddon = new FitAddon.FitAddon();
+    const fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
 
     if (typeof WebLinksAddon !== 'undefined') {
         term.loadAddon(new WebLinksAddon.WebLinksAddon());
     }
+
+    let searchAddon = null;
     if (typeof SearchAddon !== 'undefined') {
         searchAddon = new SearchAddon.SearchAddon();
         term.loadAddon(searchAddon);
     }
 
     term.open(container);
-    fitAddon.fit();
+
+    const entry = { term, fitAddon, searchAddon, container };
+    terminalCache.set(cardId, entry);
+    return entry;
 }
 
-function disposeXterm() {
-    if (term) {
-        term.dispose();
-        term = null;
-        fitAddon = null;
-        searchAddon = null;
+function showCachedTerminal(cardId, parentElement) {
+    // Hide all cached terminal containers
+    for (const [, entry] of terminalCache) {
+        entry.container.style.display = 'none';
     }
+
+    const entry = getOrCreateTerminal(cardId);
+
+    // Reparent if needed
+    if (entry.container.parentElement !== parentElement) {
+        parentElement.appendChild(entry.container);
+    }
+
+    entry.container.style.display = '';
+
+    // Fit after showing
+    requestAnimationFrame(() => {
+        try { entry.fitAddon.fit(); } catch(e) { /* ignore if not visible */ }
+    });
+
+    return entry;
 }
 
 function setupInspector() {
@@ -514,12 +547,31 @@ function setupInspector() {
 
     // Refit terminal on window resize
     window.addEventListener('resize', () => {
-        if (fitAddon && term) fitAddon.fit();
+        if (currentInspectorCardId && terminalCache.has(currentInspectorCardId)) {
+            try {
+                terminalCache.get(currentInspectorCardId).fitAddon.fit();
+            } catch(e) { /* ignore */ }
+        }
     });
+
+    // ResizeObserver on the xterm container for dynamic sizing
+    const xtermContainer = document.getElementById('terminal-xterm-container');
+    if (xtermContainer) {
+        const resizeObserver = new ResizeObserver(() => {
+            if (currentInspectorCardId && terminalCache.has(currentInspectorCardId)) {
+                try {
+                    terminalCache.get(currentInspectorCardId).fitAddon.fit();
+                } catch(e) { /* ignore */ }
+            }
+        });
+        resizeObserver.observe(xtermContainer);
+    }
 
     // Update terminal theme when data-theme attribute changes
     const themeObserver = new MutationObserver(() => {
-        if (term) term.options.theme = getTerminalTheme();
+        if (currentInspectorCardId && terminalCache.has(currentInspectorCardId)) {
+            terminalCache.get(currentInspectorCardId).term.options.theme = getTerminalTheme();
+        }
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
@@ -546,9 +598,12 @@ function setupInspector() {
 
             terminalArea.classList.remove('loading', 'empty');
 
-            if (!term) initXterm();
+            const entry = terminalCache.get(cardId);
+            if (!entry) return;
+            const { term, fitAddon } = entry;
+
             term.reset();
-            if (fitAddon) fitAddon.fit();
+            try { fitAddon.fit(); } catch(e) { /* ignore */ }
 
             if (data.output) {
                 term.write(data.output.replace(/\r?\n/g, '\r\n'));
@@ -622,18 +677,19 @@ function setupInspector() {
         currentInspectorCardId = null;
         state.selectedCardId = null;
 
+        // Hide all cached terminal containers
+        for (const [, e] of terminalCache) e.container.style.display = 'none';
+
         // On mobile: slide out and hide scrim
         if (window.innerWidth <= 1024) {
             panel.classList.remove('open');
             scrim.classList.remove('visible');
             closeTimeout = setTimeout(() => {
-                disposeXterm();
                 showEmptyState();
                 closeTimeout = null;
             }, 300);
         } else {
-            // On desktop: show empty state immediately, dispose terminal
-            disposeXterm();
+            // On desktop: show empty state immediately
             showEmptyState();
         }
     }
@@ -659,14 +715,6 @@ function setupInspector() {
         if (closeTimeout) {
             clearTimeout(closeTimeout);
             closeTimeout = null;
-        }
-
-        // Dispose xterm if switching cards or close didn't finish cleanup
-        if (term) {
-            term.dispose();
-            term = null;
-            fitAddon = null;
-            searchAddon = null;
         }
 
         // Deselect previous card
@@ -714,7 +762,7 @@ function setupInspector() {
             terminalArea.classList.add('loading');
 
             setTimeout(() => {
-                initXterm();
+                showCachedTerminal(cardId, document.getElementById('terminal-xterm-container'));
                 helpers.loadTerminalOutput(cardId);
             }, initDelay);
 
@@ -725,11 +773,10 @@ function setupInspector() {
             inputBar.classList.add('hidden');
             terminalArea.classList.remove('loading', 'empty');
             setTimeout(() => {
-                initXterm();
-                if (term) {
-                    term.write(card.last_output.replace(/\r?\n/g, '\r\n'));
-                    term.write('\r\n\r\n--- Session has ended ---');
-                }
+                const entry = showCachedTerminal(cardId, document.getElementById('terminal-xterm-container'));
+                entry.term.reset();
+                entry.term.write(card.last_output.replace(/\r?\n/g, '\r\n'));
+                entry.term.write('\r\n\r\n--- Session has ended ---');
             }, initDelay);
         } else {
             inputBar.classList.add('hidden');
