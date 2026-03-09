@@ -544,6 +544,7 @@ export function updateCardInPlace(cardData) {
     if (existing) {
         const newEl = createCardElement(cardData);
         existing.replaceWith(newEl);
+        if (typeof lucide !== 'undefined') lucide.createIcons({ root: newEl });
     }
     // Update state
     const idx = state.cards.findIndex(c => c.id === cardData.id);

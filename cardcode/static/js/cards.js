@@ -3,6 +3,48 @@ import { renderBoard, updateColumnCounts, updateEmptyState, isDragging } from '.
 import { escapeHtml, showConfirmDialog, debugError } from './utils.js';
 import { showToast } from './notifications.js';
 
+function buildBadges(card) {
+    const badges = [];
+
+    // Status badge (skip if dead)
+    const statusLabels = { alive: 'Live', waiting: 'Waiting', idle: 'Idle', dead: 'Stopped' };
+    if (card.session_status && card.session_status !== 'dead') {
+        badges.push(`<span class="badge-capsule badge-status" style="--status-color: var(--status-${card.session_status})">${statusLabels[card.session_status] || card.session_status}</span>`);
+    }
+
+    // Model badge
+    if (card.provider) {
+        const label = card.provider === 'claude-code' ? 'Claude' : card.provider === 'gemini' ? 'Gemini' : escapeHtml(card.provider);
+        badges.push(`<span class="badge-capsule badge-model">${label}</span>`);
+    }
+
+    // Duration badge
+    if (card.started_at) {
+        const dur = formatDuration(card.started_at);
+        badges.push(`<span class="badge-capsule badge-duration">${dur}</span>`);
+    }
+
+    // Cost badge
+    if (card.cost_usd && card.cost_usd > 0) {
+        badges.push(`<span class="badge-capsule badge-cost">$${card.cost_usd.toFixed(2)}</span>`);
+    }
+
+    // Context badge
+    if (card.context_pct && card.context_pct > 0) {
+        const pct = Math.round(Math.min(card.context_pct * 100, 100));
+        const highClass = pct > 70 ? ' high' : '';
+        badges.push(`<span class="badge-capsule badge-context${highClass}">${pct}%</span>`);
+    }
+
+    // Project badge — extract project name from project_path
+    if (card.project_path) {
+        const projectName = escapeHtml(card.project_path.split('/').pop());
+        badges.push(`<span class="badge-capsule badge-project">${projectName}</span>`);
+    }
+
+    return badges.join('');
+}
+
 export function createCardElement(card) {
     const el = document.createElement('div');
     el.className = 'card';
@@ -15,48 +57,17 @@ export function createCardElement(card) {
     el.classList.add(`card-status-${status}`);
     if (card.column_name === 'done' || card.column_name === 'archive') el.classList.add('card-done');
 
-    // Provider icon SVGs
-    const providerIcons = {
-        'claude-code': '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10L6 2l4 8H2z" fill="currentColor" opacity="0.9"/></svg>',
-        'gemini': '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="6" cy="6" r="2" fill="currentColor"/></svg>',
-    };
-    const providerNames = { 'claude-code': 'Claude', 'gemini': 'Gemini' };
-    const providerKey = card.provider || '';
-    const providerIcon = providerIcons[providerKey] || '<svg class="provider-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" fill="currentColor" opacity="0.5"/></svg>';
-    const modelName = providerNames[providerKey] || (providerKey ? escapeHtml(providerKey) : '');
-
-    // Duration - show dash if not started
-    const duration = card.started_at ? formatDuration(card.started_at) : '\u2014';
-
-    // Context percentage
+    // Context gauge fill class
     const pct = Math.min((card.context_pct || 0) * 100, 100);
     const fillClass = pct >= 80 ? 'critical' : pct >= 60 ? 'warning' : '';
-    const ctxText = pct > 0 ? `${Math.round(pct)}%` : '';
-
-    // Cost - always show
-    const costStr = card.cost_usd > 0 ? `$${card.cost_usd.toFixed(2)}` : '\u2014';
 
     let html = '';
 
     // Title
     html += `<div class="card-title">${escapeHtml(card.title)}</div>`;
 
-    // Meta row: model chip + duration (always shown)
-    html += '<div class="card-meta-row">';
-    if (modelName) {
-        html += `<span class="model-chip">${providerIcon}<span class="model-name">${modelName}</span></span>`;
-    }
-    html += `<span class="card-duration">${duration}</span>`;
-    html += '</div>';
-
-    // Bottom bar: cost + context text + status dot
-    html += '<div class="card-bottom">';
-    html += `<span class="card-cost">${costStr}</span>`;
-    if (ctxText) {
-        html += `<span class="card-context-text">${ctxText}</span>`;
-    }
-    html += `<span class="card-status-dot status-${status}"></span>`;
-    html += '</div>';
+    // Badge capsules
+    html += `<div class="card-badges">${buildBadges(card)}</div>`;
 
     // Context gauge
     html += `<div class="context-gauge"><div class="context-fill ${fillClass}" style="width:${pct}%"></div></div>`;
