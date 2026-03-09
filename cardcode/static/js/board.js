@@ -6,6 +6,27 @@ import { showConfirmDialog, debugError } from './utils.js';
 
 const COLLAPSE_KEY = 'cardcode-collapsed-columns';
 
+const COLUMN_PALETTE = [
+    'oklch(65% 0.15 250)',   // Blue
+    'oklch(68% 0.14 55)',    // Amber
+    'oklch(65% 0.12 165)',   // Green
+    'oklch(62% 0.15 310)',   // Purple
+    'oklch(62% 0.14 25)',    // Red
+    'oklch(65% 0.12 195)',   // Teal
+];
+
+const SWATCH_COLORS = [
+    ...COLUMN_PALETTE,
+    'oklch(65% 0.15 340)',   // Pink
+    'oklch(68% 0.14 70)',    // Orange
+    'oklch(55% 0.18 280)',   // Indigo
+    'oklch(70% 0.15 140)',   // Lime
+];
+
+function getColumnColor(column, index) {
+    return column.color || COLUMN_PALETTE[index % COLUMN_PALETTE.length];
+}
+
 let _dragInProgress = false;
 export function isDragging() { return _dragInProgress; }
 let sortableInstances = [];
@@ -83,7 +104,7 @@ export function renderBoard(cards) {
     });
 
     // Render each column
-    columns.forEach(col => {
+    columns.forEach((col, colIndex) => {
         const colCards = (grouped[col.name] || []).sort((a, b) => a.position - b.position);
         const isCollapsed = collapsedMap[col.name] || false;
 
@@ -117,6 +138,11 @@ export function renderBoard(cards) {
             if (typeof lucide !== 'undefined') lucide.createIcons({ root: collapseBtn });
         });
 
+        // Accent dot
+        const dot = document.createElement('span');
+        dot.className = 'column-dot';
+        dot.style.backgroundColor = getColumnColor(col, colIndex);
+
         // Column name (double-click to rename)
         const nameEl = document.createElement('h2');
         nameEl.textContent = col.name.charAt(0).toUpperCase() + col.name.slice(1);
@@ -138,6 +164,7 @@ export function renderBoard(cards) {
         });
 
         header.appendChild(collapseBtn);
+        header.appendChild(dot);
         header.appendChild(nameEl);
         header.appendChild(countEl);
         header.appendChild(actionsBtn);
@@ -231,6 +258,33 @@ function startRename(col, nameEl) {
     input.select();
 }
 
+function buildSwatchPicker(col, menu) {
+    const picker = document.createElement('div');
+    picker.className = 'swatch-picker';
+    SWATCH_COLORS.forEach(color => {
+        const btn = document.createElement('button');
+        btn.style.backgroundColor = color;
+        if (col.color === color) btn.classList.add('active');
+        btn.title = color;
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            try {
+                await apiPatch(`/columns/${col.id}`, { color });
+                const stateCol = state.columns.find(c => c.id === col.id);
+                if (stateCol) stateCol.color = color;
+                col.color = color;
+                menu.remove();
+                renderBoard(state.cards);
+            } catch (err) {
+                debugError('Color change failed:', err);
+                showToast({ title: 'Failed to change color', message: 'Check your connection and try again', type: 'error' });
+            }
+        });
+        picker.appendChild(btn);
+    });
+    return picker;
+}
+
 function showColumnMenu(col, anchorEl, cardCount) {
     // Remove any existing menu
     document.querySelectorAll('.column-context-menu').forEach(el => el.remove());
@@ -251,6 +305,18 @@ function showColumnMenu(col, anchorEl, cardCount) {
         if (nameEl) startRename(col, nameEl);
     });
     menu.appendChild(renameItem);
+
+    // Change color option
+    const colorItem = document.createElement('button');
+    colorItem.className = 'column-menu-item';
+    colorItem.setAttribute('role', 'menuitem');
+    colorItem.innerHTML = '<i data-lucide="palette"></i> Change color';
+    colorItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        colorItem.replaceWith(buildSwatchPicker(col, menu));
+        if (typeof lucide !== 'undefined') lucide.createIcons({ root: menu });
+    });
+    menu.appendChild(colorItem);
 
     const deleteItem = document.createElement('button');
     deleteItem.className = 'column-menu-item column-menu-item-danger';

@@ -564,6 +564,41 @@ a:focus-visible {
     flex: 1;
 }
 
+/* Column accent dots */
+.column-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Swatch color picker in column actions menu */
+.swatch-picker {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  flex-wrap: wrap;
+  max-width: 160px;
+}
+
+.swatch-picker button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.swatch-picker button:hover {
+  border-color: var(--border-focus);
+}
+
+.swatch-picker button.active {
+  border-color: var(--text-primary);
+}
+
 .column-count {
     display: inline-flex;
     align-items: center;
