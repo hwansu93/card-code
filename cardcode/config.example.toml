@@ -1,0 +1,6 @@
+[cardcode]
+claude_dir = "~/.claude"
+projects_dir = ""  # auto-detect from git repos
+tmux_socket = ""   # auto-detect
+data_dir = "~/.cardcode"
+port = 8420

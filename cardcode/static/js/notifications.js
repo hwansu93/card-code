@@ -1,0 +1,75 @@
+import { state } from './app.js';
+import { escapeHtml } from './utils.js';
+
+function dismissToast(toast) {
+    toast.classList.add('toast-exit');
+    toast.addEventListener('animationend', () => toast.remove());
+}
+
+export function showToast({ title, message, type = 'info', duration = 5000 }) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+
+    const iconName = { warning: 'alert-triangle', error: 'alert-circle', success: 'check-circle', info: 'info' }[type] || 'info';
+
+    toast.innerHTML = `
+        <span class="toast-icon"><i data-lucide="${iconName}"></i></span>
+        <div class="toast-body">
+            <div class="toast-title">${escapeHtml(title)}</div>
+            ${message ? `<div class="toast-message">${escapeHtml(message)}</div>` : ''}
+        </div>
+        <button class="toast-close"><i data-lucide="x"></i></button>
+    `;
+
+    toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(toast));
+
+    const existing = container.querySelectorAll('.toast:not(.toast-exit)');
+    if (existing.length >= 5) {
+        dismissToast(existing[0]);
+    }
+
+    container.appendChild(toast);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: toast });
+
+    if (duration > 0) {
+        setTimeout(() => dismissToast(toast), duration);
+    }
+}
+
+export function setupNotifications() {
+    // Status changes
+    window.addEventListener('cardcode:status', (e) => {
+        const { id, session_status } = e.detail;
+        const card = state.cards.find(c => c.id === id);
+        const title = card?.title || 'Session';
+
+        if (session_status === 'waiting') {
+            showToast({ title: `${title} needs input`, message: 'The session is waiting for a response', type: 'warning' });
+        } else if (session_status === 'dead') {
+            showToast({ title: `${title} session ended`, type: 'info' });
+        }
+    });
+
+    // Context warnings (deduplicated per card)
+    const notifiedContextCards = new Set();
+    window.addEventListener('cardcode:metrics', (e) => {
+        const { id, context_pct } = e.detail;
+        if (context_pct && context_pct > 0.6) {
+            if (notifiedContextCards.has(id)) return;
+            notifiedContextCards.add(id);
+            const card = state.cards.find(c => c.id === id);
+            const title = card?.title || 'Session';
+            const pct = (context_pct * 100).toFixed(0);
+            showToast({
+                title: `${title} — context at ${pct}%`,
+                message: 'Consider handing off to a new session soon',
+                type: context_pct > 0.8 ? 'error' : 'warning',
+            });
+        } else if (context_pct && context_pct <= 0.6) {
+            notifiedContextCards.delete(id);
+        }
+    });
+}

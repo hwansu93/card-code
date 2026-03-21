@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardCode</title>
+    <link rel="icon" type="image/svg+xml" href="/img/cardcode-icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- xterm.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.15.0/lib/addon-search.min.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <meta name="base-path" content="">
+    <script>
+        // FOUC prevention
+        (function() {
+            const theme = localStorage.getItem('cardcode-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <h1 class="logo">
+                <img src="/img/cardcode-icon.svg" alt="CardCode" class="logo-icon">
+                CardCode
+                <span id="connection-status" class="connection-dot disconnected" title="Disconnected from server" role="status" aria-live="polite" aria-label="Disconnected from server"></span>
+            </h1>
+            <select id="project-filter" class="filter-select">
+                <option value="">All Projects</option>
+            </select>
+        </div>
+        <div class="toolbar-right">
+            <button id="new-card-btn" class="btn btn-primary"><i data-lucide="plus"></i> New Card</button>
+            <button id="theme-toggle" class="btn btn-icon" title="Switch between light and dark theme">
+                <i data-lucide="sun-moon"></i>
+            </button>
+            <button id="view-toggle" class="btn btn-icon" title="Command Center" aria-label="Toggle Command Center">
+                <i data-lucide="layout-grid"></i>
+            </button>
+            <button id="settings-btn" class="btn btn-icon" title="Settings">
+                <i data-lucide="settings"></i>
+            </button>
+            <button id="archive-btn" class="btn btn-icon" title="Archive">
+                <i data-lucide="archive"></i>
+                <span class="badge" id="archive-count" style="display:none">0</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="board" id="board" role="main" aria-label="Kanban board">
+            <!-- Columns are rendered dynamically by board.js -->
+
+            <!-- Empty State / Onboarding Overlay -->
+            <div class="empty-state hidden" id="empty-state">
+                <div class="empty-state-content">
+                    <div class="empty-state-icon">
+                        <img src="/img/cardcode-icon.svg" alt="" class="empty-state-icon-img" width="64" height="64">
+                    </div>
+                    <h2>Welcome to CardCode</h2>
+                    <p>Your Kanban dashboard for Claude Code sessions.</p>
+                    <div class="onboarding-actions">
+                        <div class="onboarding-card onboarding-card-info">
+                            <i data-lucide="radar"></i>
+                            <h3>Sessions auto-detected</h3>
+                            <p>Running Claude sessions are automatically discovered and appear as cards.</p>
+                        </div>
+                        <div class="onboarding-card" id="onboarding-new-card" tabindex="0" role="button" aria-label="Create your first card">
+                            <i data-lucide="plus-circle"></i>
+                            <h3>Create your first card</h3>
+                            <p>Add a task card and spawn a Claude session for it.</p>
+                        </div>
+                        <div class="onboarding-card" id="onboarding-settings" tabindex="0" role="button" aria-label="Auto-detect running sessions">
+                            <i data-lucide="columns-3"></i>
+                            <h3>Customize your columns</h3>
+                            <p>Configure workflow columns to match your process.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <main class="command-center hidden" id="command-center">
+            <div class="cc-sidebar" id="cc-sidebar">
+                <div class="cc-sidebar-header">
+                    <span>Sessions</span>
+                    <button class="cc-sidebar-toggle" id="cc-sidebar-toggle" aria-label="Toggle sidebar">
+                        <i data-lucide="panel-left-close"></i>
+                    </button>
+                </div>
+                <div class="cc-card-list" id="cc-card-list"></div>
+            </div>
+            <div class="cc-grid" id="cc-grid"></div>
+            <div class="cc-empty" id="cc-empty">
+                <i data-lucide="layout-grid"></i>
+                <h3>Command Center</h3>
+                <p>Drag cards from the sidebar or click + to add terminal tiles</p>
+            </div>
+        </main>
+
+        <aside class="inspector-panel" id="inspector-panel">
+            <div class="inspector-empty" id="inspector-empty">
+                <span>Select a card to inspect</span>
+            </div>
+            <div class="inspector-content" id="inspector-content" style="display:none">
+                <div class="inspector-header">
+                    <div class="inspector-header-left">
+                        <span class="inspector-title" id="inspector-title">No card selected</span>
+                        <span class="inspector-meta" id="inspector-meta"></span>
+                    </div>
+                    <div class="inspector-header-right">
+                        <button class="inspector-btn" id="inspector-refresh" aria-label="Refresh" title="Refresh">
+                            <i data-lucide="refresh-cw"></i>
+                        </button>
+                        <label class="auto-refresh-toggle" title="Auto-refresh">
+                            <input type="checkbox" id="inspector-auto-refresh" checked>
+                            <i data-lucide="radio"></i>
+                        </label>
+                        <div class="font-size-controls">
+                            <button class="inspector-btn" id="font-size-down" aria-label="Decrease font size" title="Decrease font size">
+                                <i data-lucide="minus"></i>
+                            </button>
+                            <button class="inspector-btn" id="font-size-up" aria-label="Increase font size" title="Increase font size">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <button class="inspector-btn inspector-close" id="inspector-close" aria-label="Close" title="Close">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="inspector-terminal" id="inspector-terminal">
+                    <div id="terminal-xterm-container"></div>
+                    <div class="terminal-loading" id="terminal-loading">
+                        <i data-lucide="loader-2" class="spin"></i>
+                        <span>Loading terminal output...</span>
+                    </div>
+                    <div class="terminal-empty" id="terminal-empty">
+                        <i data-lucide="terminal"></i>
+                        <span>No active session</span>
+                    </div>
+                </div>
+                <div class="inspector-input" id="inspector-input">
+                    <input type="text" id="terminal-prompt-input" placeholder="Send a message to the session..." autocomplete="off">
+                    <button id="terminal-prompt-send" aria-label="Send">
+                        <i data-lucide="send"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        <div class="inspector-scrim" id="inspector-scrim"></div>
+    </div>
+
+    <!-- Settings Drawer -->
+    <aside class="drawer drawer-right" id="settings-drawer" role="dialog" aria-label="Settings">
+        <div class="drawer-header">
+            <h3><i data-lucide="settings"></i> Settings</h3>
+            <button class="btn btn-icon drawer-close" id="settings-close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-content">
+            <form id="settings-form" class="settings-form">
+                <fieldset>
+                    <legend>Connection</legend>
+                    <label>
+                        <span class="label-text">Tmux Socket Path</span>
+                        <div class="input-with-action">
+                            <input type="text" name="tmux_socket" placeholder="/tmp/tmux-1000/default">
+                            <button type="button" class="btn btn-small btn-ghost" id="test-tmux-connection" title="Test tmux connection">
+                                <i data-lucide="plug-zap"></i>
+                            </button>
+                        </div>
+                        <span class="field-hint">Path to the tmux socket for session detection</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Claude Directory</span>
+                        <div class="input-with-action">
+                            <input type="text" name="claude_dir" placeholder="~/.claude">
+                            <button type="button" class="btn btn-small btn-ghost" id="test-claude-dir" title="Test Claude CLI">
+                                <i data-lucide="plug-zap"></i>
+                            </button>
+                        </div>
+                        <span class="field-hint">Where Claude stores config and session data</span>
+                    </label>
+                    <details class="settings-advanced">
+                        <summary>Advanced</summary>
+                        <label>
+                            <span class="label-text">Projects Directory</span>
+                            <input type="text" name="projects_dir" placeholder="/path/to/projects">
+                            <span class="field-hint">Root directory containing your git repos</span>
+                        </label>
+                    </details>
+                </fieldset>
+                <fieldset>
+                    <legend>Board</legend>
+                    <label>
+                        <span class="label-text">Default Column for New Cards</span>
+                        <select name="default_column">
+                            <option value="backlog">Backlog</option>
+                            <option value="queue">Queue</option>
+                            <option value="active">Active</option>
+                        </select>
+                        <span class="field-hint">Where newly created cards land</span>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>Server</legend>
+                    <label>
+                        <span class="label-text">Bind Address</span>
+                        <input type="text" name="host" placeholder="0.0.0.0">
+                        <span class="field-hint">0.0.0.0 for all interfaces, 127.0.0.1 for local only</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Port</span>
+                        <input type="number" name="port" placeholder="8420">
+                    </label>
+                    <label>
+                        <span class="label-text">Base Path</span>
+                        <input type="text" name="base_path" placeholder="/cardcode">
+                        <span class="field-hint">URL prefix for reverse proxy (e.g., /cardcode)</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Data Directory</span>
+                        <input type="text" name="data_dir" placeholder="~/.cardcode">
+                        <span class="field-hint">Where CardCode stores its database</span>
+                    </label>
+                    <label>
+                        <span class="label-text">Poll Interval (ms)</span>
+                        <input type="number" name="poll_interval" placeholder="3000" min="500" max="30000">
+                        <span class="field-hint">How often to poll tmux for session updates (500-30000)</span>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>About</legend>
+                    <div class="about-info">
+                        <div class="about-row">
+                            <span class="label-text">Version</span>
+                            <span id="settings-version">--</span>
+                        </div>
+                        <div class="about-row">
+                            <span class="label-text">Health</span>
+                            <span id="settings-health">--</span>
+                            <button type="button" class="btn btn-small btn-ghost" id="health-check-btn" title="Check health">
+                                <i data-lucide="heart-pulse"></i>
+                            </button>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Integrations</legend>
+                    <div id="integrations-status" class="integrations-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </fieldset>
+                <div class="dialog-actions">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                    <span id="settings-saved-msg" class="saved-msg" style="display:none">Settings saved. Restart the server to apply changes.</span>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Archive Drawer -->
+    <aside class="drawer drawer-right" id="archive-drawer" role="dialog" aria-label="Archive">
+        <div class="drawer-header">
+            <h3><i data-lucide="archive"></i> Archive</h3>
+            <div class="drawer-search">
+                <input type="text" id="archive-search" placeholder="Search archived cards..." class="search-input">
+            </div>
+            <button class="btn btn-icon drawer-close" id="archive-close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-content" id="archive-list">
+            <!-- Cards populated by JS -->
+        </div>
+    </aside>
+
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+
+    <!-- Card Dialog -->
+    <dialog id="card-dialog">
+        <form id="card-form">
+            <h3 id="card-dialog-title">New Card</h3>
+            <label>Title <input type="text" name="title" required placeholder="e.g., Refactor auth module"></label>
+            <label>Description <textarea name="description" rows="3" placeholder="What needs to be done?"></textarea></label>
+            <label>Project
+                <select name="project" id="card-project-select">
+                    <option value="">None</option>
+                </select>
+            </label>
+            <label>Initial Prompt <textarea name="initial_prompt" rows="3" placeholder="Prompt sent when spawning a Claude session"></textarea></label>
+            <label>Handoff Notes <textarea name="handoff_notes" rows="3" placeholder="Context for continuing this task later"></textarea></label>
+            <div class="dialog-actions">
+                <button type="button" class="btn" id="card-dialog-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="card-dialog-submit">Save Card</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Spawn Dialog -->
+    <dialog id="spawn-dialog">
+        <h3>Spawn Claude Session</h3>
+        <p id="spawn-card-title"></p>
+        <label>Project Path <input type="text" id="spawn-project-path" placeholder="/path/to/project"></label>
+        <label>Initial Prompt <textarea id="spawn-prompt" rows="3" placeholder="What should Claude work on?"></textarea></label>
+        <div class="dialog-actions">
+            <button class="btn" id="spawn-cancel">Cancel</button>
+            <button class="btn btn-primary" id="spawn-confirm">Spawn Session</button>
+        </div>
+    </dialog>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container" role="alert" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>
